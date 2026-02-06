@@ -1,21 +1,21 @@
 # Vietmap Tracking Plugin
 
-[![pub package](https://img.shields.io/pub/v/vietmap_tracking_plugin.svg)](https://pub.dev/packages/vietmap_tracking_plugin)
-[![Platform](https://img.shields.io/badge/platform-android%20%7C%20ios-lightgrey.svg)](https://pub.dev/packages/vietmap_tracking_plugin)
+A comprehensive Flutter plugin for GPS location tracking with VietmapTrackingSDK integration, featuring advanced background support and speed alerts.
 
-A comprehensive Flutter plugin for GPS tracking and location data transmission to Vietmap's tracking API. This plugin provides both native platform integration and pure Dart HTTP client functionality for maximum flexibility, including background location tracking support.
+[![pub package](https://img.shields.io/pub/v/vietmap_tracking_plugin.svg)](https://pub.dev/packages/vietmap_tracking_plugin)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ## Features
 
-- ✅ **Easy Configuration**: Simple API key and endpoint setup
-- ✅ **HTTP Integration**: Built-in HTTP functionality for sending GPS data
-- ✅ **Automatic Retry**: Retry logic with exponential backoff for failed requests
-- ✅ **Real-time Tracking**: Send individual locations immediately
-- ✅ **Background Tracking**: Continue tracking when app is in background
-- ✅ **Offline Support**: Queue locations when offline, send when connected
-- ✅ **Native Integration**: Android and iOS platform implementations
-- ✅ **Error Handling**: Comprehensive error reporting and automatic caching
-- ✅ **Configurable**: Customizable timeouts and retry attempts
+- 🎯 **GPS Location Tracking** - Continuous location tracking with configurable accuracy
+- 📡 **VietmapTrackingSDK Integration** - Native SDK integration for iOS and Android
+- 🔋 **Background Tracking** - Continue tracking even when app is in background
+- ⚡ **Speed Alert System** - Real-time speed monitoring
+- 🎨 **Pre-configured Presets** - Navigation, Fitness, General, and Battery Saver modes
+- 📍 **Permission Handling** - Automatic location permission management
+- 📊 **Event Streams** - Real-time location and tracking status updates
+- 💾 **Session Management** - Track session statistics and history
+- 🔌 **Cross-Platform** - Works on both iOS (11.0+) and Android (API 21+)
 
 ## Installation
 
@@ -34,75 +34,36 @@ flutter pub get
 
 ## Platform Setup
 
-### Android Configuration
+### Android
 
-1. **Update `android/app/build.gradle`:**
-```kotlin
-android {
-    compileSdk 34
+Add the following permissions to your `AndroidManifest.xml`:
 
-    defaultConfig {
-        targetSdk 34
-        minSdk 23
-        // ... other config
-    }
-}
-```
-
-2. **Add permissions to `android/app/src/main/AndroidManifest.xml`:**
 ```xml
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    
-    <!-- Location permissions -->
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
-    
-    <!-- Background service permissions -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    
-    <!-- Network permissions -->
-    <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-
-    <application>
-        <!-- Your app configuration -->
-    </application>
 </manifest>
 ```
 
-### iOS Configuration
+### iOS
 
-Add the following to your `ios/Runner/Info.plist`:
+Add the following keys to your `Info.plist`:
 
 ```xml
-<dict>
-    <!-- Location permissions -->
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <string>This app needs location access to track your position for navigation and delivery services.</string>
-    <key>NSLocationWhenInUseUsageDescription</key>
-    <string>This app needs location access to track your position for navigation and delivery services.</string>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <string>This app needs location access to track your position in the background for delivery tracking.</string>
-    
-    <!-- Background modes -->
-    <key>UIBackgroundModes</key>
-    <array>
-        <string>location</string>
-        <string>background-processing</string>
-        <string>background-fetch</string>
-    </array>
-    
-    <!-- Flutter background service -->
-    <key>BGTaskSchedulerPermittedIdentifiers</key>
-    <array>
-        <string>$(PRODUCT_BUNDLE_IDENTIFIER).background_service</string>
-    </array>
-    
-    <!-- Other existing keys... -->
-</dict>
+<key>NSLocationWhenInUseUsageDescription</key>
+<string>This app needs access to location when in use.</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<string>This app needs access to location for background tracking.</string>
+<key>NSLocationAlwaysUsageDescription</key>
+<string>This app needs access to location for background tracking.</string>
+<key>UIBackgroundModes</key>
+<array>
+    <string>location</string>
+</array>
 ```
 
 ## Quick Start
@@ -115,341 +76,408 @@ import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize background service first
-  await VietmapTrackingPlugin.instance.initializeBackgroundService();
+  final controller = VietmapTrackingController.instance;
   
-  // Initialize with basic configuration
-  await VietmapTrackingPlugin.instance.initialize(
-    VietmapTrackingConfig(
-      apiKey: 'your-api-key-here',
-      endpoint: 'https://api.vietmap.vn/tracking',
-    ),
+  // Configure with your API key
+  await controller.configure(
+    'YOUR_API_KEY',
+    baseURL: 'https://api.vietmap.vn',
   );
   
   runApp(MyApp());
 }
 ```
 
-### 2. Background Tracking
+### 2. Start Tracking
 
 ```dart
-// Start background location tracking
-await VietmapTrackingPlugin.instance.startLocationTracking();
+// Use a pre-configured preset
+final config = TrackingPresets.navigation();
 
-// Check if tracking is running
-bool isRunning = await VietmapTrackingPlugin.instance.isTrackingServiceRunning();
-
-// Stop background tracking
-await VietmapTrackingPlugin.instance.stopLocationTracking();
-```
-
-### 3. Test Connection
-
-```dart
-// Test connection before starting tracking
-final response = await VietmapTrackingPlugin.instance.testConnection();
-if (response['success']) {
-  print('Connection test passed');
-  // Start tracking
-} else {
-  print('Connection test failed: ${response['message']}');
-}
-```
-
-// Or let it auto-send when batch is full or interval reached
-```
-
-## Advanced Configuration
-
-```dart
-await VietmapTrackingPlugin.instance.initialize(
-  VietmapTrackingConfig(
-    apiKey: 'your-api-key',
-    endpoint: 'https://api.vietmap.vn/tracking',
-    batchSize: 10,                              // Send when 10 locations queued
-    batchInterval: Duration(minutes: 2),        // Send every 2 minutes
-    httpTimeout: Duration(seconds: 30),         // HTTP timeout
-    maxRetryAttempts: 3,                        // Retry failed requests
-    trackingIntervalSeconds: 30,                // Location tracking interval (default: 30s)
-    additionalConfig: {
-      'debug': true,
-      'compression': 'gzip',
-    },
-  ),
+// Or create custom configuration
+final config = LocationTrackingConfig(
+  intervalMs: 5000,
+  distanceFilter: 10.0,
+  accuracy: LocationAccuracy.high,
+  backgroundMode: true,
+  notificationTitle: 'Tracking Active',
+  notificationMessage: 'Your location is being tracked',
 );
+
+// Start tracking
+await controller.startTracking(config);
 ```
 
-### 4. Dynamic Tracking Interval
-
-You can update the tracking interval at runtime:
+### 3. Listen to Location Updates
 
 ```dart
-// Update to 15 seconds
-await VietmapTrackingPlugin.instance.setTrackingInterval(15);
-
-// Update to 1 minute  
-await VietmapTrackingPlugin.instance.setTrackingInterval(60);
-
-// Get current interval
-final currentInterval = await VietmapTrackingPlugin.instance.getTrackingInterval();
-print('Current tracking interval: ${currentInterval}s');
+controller.onLocationUpdate.listen((LocationData location) {
+  print('Lat: ${location.latitude}, Lng: ${location.longitude}');
+  print('Speed: ${location.speed} m/s');
+  print('Accuracy: ${location.accuracy} meters');
+});
 ```
 
-## Background Tracking
-
-### Setup Background Service
+### 4. Listen to Tracking Status
 
 ```dart
-class MyApp extends StatelessWidget {
+controller.onTrackingStatusChanged.listen((TrackingStatus status) {
+  print('Is Tracking: ${status.isTracking}');
+  print('Duration: ${status.duration}');
+});
+```
+
+### 5. Stop Tracking
+
+```dart
+await controller.stopTracking();
+```
+
+## API Reference
+
+### VietmapTrackingController
+
+Main controller for managing tracking operations.
+
+#### Configuration
+
+```dart
+// Configure SDK
+Future<bool> configure(String apiKey, {String? baseURL})
+
+// Configure Alert API for speed monitoring
+Future<bool> configureAlertAPI(String apiKey, String apiID)
+```
+
+#### Permission Management
+
+```dart
+// Request location permissions
+Future<PermissionResult> requestLocationPermissions()
+
+// Check if permissions are granted
+Future<PermissionResult> hasLocationPermissions()
+
+// Request always (background) permissions
+Future<String> requestAlwaysLocationPermissions()
+```
+
+#### Tracking Operations
+
+```dart
+// Start tracking with configuration
+Future<bool> startTracking(LocationTrackingConfig config)
+
+// Stop tracking
+Future<bool> stopTracking()
+
+// Get current location (one-time fetch)
+Future<LocationData> getCurrentLocation()
+
+// Check if tracking is active
+Future<bool> isTrackingActive()
+
+// Get detailed tracking status
+Future<TrackingStatus> getTrackingStatus()
+
+// Update configuration while tracking
+Future<bool> updateTrackingConfig(LocationTrackingConfig config)
+```
+
+#### Event Streams
+
+```dart
+// Location update stream
+Stream<LocationData> onLocationUpdate
+
+// Tracking status stream
+Stream<TrackingStatus> onTrackingStatusChanged
+```
+
+### Models
+
+#### LocationTrackingConfig
+
+Configuration for location tracking:
+
+```dart
+LocationTrackingConfig({
+  required int intervalMs,           // Update interval in milliseconds
+  required double distanceFilter,    // Minimum distance in meters
+  required LocationAccuracy accuracy, // GPS accuracy level
+  required bool backgroundMode,       // Enable background tracking
+  String? notificationTitle,          // Android notification title
+  String? notificationMessage,        // Android notification message
+})
+```
+
+#### LocationData
+
+GPS location data:
+
+```dart
+LocationData({
+  required double latitude,
+  required double longitude,
+  required double altitude,
+  required double accuracy,
+  required double speed,
+  required double bearing,
+  required int timestamp,
+})
+```
+
+#### TrackingStatus
+
+Tracking session status:
+
+```dart
+TrackingStatus({
+  required bool isTracking,
+  int? lastLocationUpdate,
+  required int trackingDuration,
+})
+```
+
+#### PermissionResult
+
+Location permission status:
+
+```dart
+PermissionResult({
+  required bool granted,
+  required PermissionStatus status,
+  required bool fineLocation,
+  required bool coarseLocation,
+  required bool backgroundLocation,
+})
+```
+
+### Pre-configured Presets
+
+#### Navigation Mode
+High accuracy, frequent updates (3s interval, 5m distance filter):
+```dart
+final config = TrackingPresets.navigation();
+```
+
+#### Fitness Mode
+Balanced accuracy and battery (5s interval, 10m distance filter):
+```dart
+final config = TrackingPresets.fitness();
+```
+
+#### General Tracking
+Medium accuracy, standard updates (10s interval, 15m distance filter):
+```dart
+final config = TrackingPresets.general();
+```
+
+#### Battery Saver
+Lower accuracy, less frequent (30s interval, 50m distance filter):
+```dart
+final config = TrackingPresets.batterySaver();
+```
+
+### Utility Functions
+
+#### LocationUtils
+
+```dart
+// Calculate distance between coordinates (Haversine formula)
+double calculateDistance(double lat1, double lon1, double lat2, double lon2)
+
+// Calculate distance between LocationData objects
+double distanceBetween(LocationData loc1, LocationData loc2)
+
+// Convert speed units
+double metersPerSecondToKmh(double metersPerSecond)
+double kmhToMetersPerSecond(double kmh)
+
+// Format coordinates
+String formatCoordinates(double latitude, double longitude)
+
+// Check if location is within radius
+bool isWithinRadius(LocationData location, double targetLat, double targetLon, double radiusMeters)
+```
+
+## Example App
+
+See the [example](example/) directory for a complete working example.
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
+
+void main() => runApp(MyApp());
+
+class MyApp extends StatefulWidget {
   @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Tracking App',
-      home: TrackingScreen(),
-    );
-  }
+  _MyAppState createState() => _MyAppState();
 }
 
-class TrackingScreen extends StatefulWidget {
-  @override
-  _TrackingScreenState createState() => _TrackingScreenState();
-}
-
-class _TrackingScreenState extends State<TrackingScreen> {
-  bool _isTracking = false;
-
+class _MyAppState extends State<MyApp> {
+  final controller = VietmapTrackingController.instance;
+  LocationData? currentLocation;
+  
   @override
   void initState() {
     super.initState();
-    _checkTrackingStatus();
+    _initialize();
+    _setupListeners();
   }
-
-  Future<void> _checkTrackingStatus() async {
-    final isRunning = await VietmapTrackingPlugin.instance.isTrackingServiceRunning();
-    setState(() {
-      _isTracking = isRunning;
+  
+  Future<void> _initialize() async {
+    await controller.configure('YOUR_API_KEY');
+  }
+  
+  void _setupListeners() {
+    controller.onLocationUpdate.listen((location) {
+      setState(() => currentLocation = location);
     });
   }
-
-  Future<void> _startTracking() async {
-    try {
-      await VietmapTrackingPlugin.instance.startLocationTracking();
-      setState(() {
-        _isTracking = true;
-      });
-      print('📍 Background tracking started');
-    } catch (e) {
-      print('❌ Failed to start tracking: $e');
-    }
-  }
-
-  Future<void> _stopTracking() async {
-    try {
-      await VietmapTrackingPlugin.instance.stopLocationTracking();
-      setState(() {
-        _isTracking = false;
-      });
-      print('⏹️ Background tracking stopped');
-    } catch (e) {
-      print('❌ Failed to stop tracking: $e');
-    }
-  }
-
+  
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text('Vietmap Tracking')),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text('Tracking Status: ${_isTracking ? "Running" : "Stopped"}'),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _isTracking ? _stopTracking : _startTracking,
-              child: Text(_isTracking ? 'Stop Tracking' : 'Start Tracking'),
-            ),
-          ],
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(title: Text('Vietmap Tracking')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text('Latitude: ${currentLocation?.latitude ?? "N/A"}'),
+              Text('Longitude: ${currentLocation?.longitude ?? "N/A"}'),
+              ElevatedButton(
+                onPressed: () async {
+                  final config = TrackingPresets.navigation();
+                  await controller.startTracking(config);
+                },
+                child: Text('Start Tracking'),
+              ),
+              ElevatedButton(
+                onPressed: () => controller.stopTracking(),
+                child: Text('Stop Tracking'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 ```
-});
 
-VietmapTrackingService.instance.onError((error) {
-  print('❌ Error: ${error.message}');
-  // Handle error (show notification, retry, etc.)
+## Advanced Usage
+
+### Custom Tracking Configuration
+
+```dart
+final customConfig = LocationTrackingConfig(
+  intervalMs: 2000,           // Update every 2 seconds
+  distanceFilter: 5.0,        // Minimum 5 meters movement
+  accuracy: LocationAccuracy.high,
+  backgroundMode: true,
+  notificationTitle: 'Delivery Tracking',
+  notificationMessage: 'Tracking your delivery route',
+);
+
+await controller.startTracking(customConfig);
+```
+
+### Update Configuration During Tracking
+
+```dart
+// Start with battery saver
+await controller.startTracking(TrackingPresets.batterySaver());
+
+// Switch to navigation mode
+await controller.updateTrackingConfig(TrackingPresets.navigation());
+```
+
+### Handle Permissions Explicitly
+
+```dart
+// Check current permissions
+final permissionResult = await controller.hasLocationPermissions();
+
+if (!permissionResult.granted) {
+  // Request permissions
+  final result = await controller.requestLocationPermissions();
+  
+  if (!result.granted) {
+    // Show error to user
+    print('Location permission denied');
+    return;
+  }
+}
+
+// Request background permission for iOS
+if (Platform.isIOS) {
+  final alwaysPermission = await controller.requestAlwaysLocationPermissions();
+  print('Always permission: $alwaysPermission');
+}
+```
+
+### Track Distance Traveled
+
+```dart
+final List<LocationData> locations = [];
+double totalDistance = 0.0;
+
+controller.onLocationUpdate.listen((location) {
+  if (locations.isNotEmpty) {
+    final distance = LocationUtils.distanceBetween(
+      locations.last,
+      location,
+    );
+    totalDistance += distance;
+  }
+  locations.add(location);
+  
+  print('Total distance: ${totalDistance / 1000} km');
 });
 ```
 
 ## Troubleshooting
 
-### Common Issues
+### Android
 
-#### 1. Location Permission Denied
-```dart
-// Check and request permissions
-import 'package:geolocator/geolocator.dart';
+**Issue**: Background tracking stops after some time
+- Ensure `FOREGROUND_SERVICE` and `FOREGROUND_SERVICE_LOCATION` permissions are declared
+- Add battery optimization exemption for your app
 
-bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-if (!serviceEnabled) {
-  throw Exception('Location services are disabled.');
-}
+**Issue**: Location permission denied
+- Check that all required permissions are in `AndroidManifest.xml`
+- For Android 10+, ensure `ACCESS_BACKGROUND_LOCATION` is declared
 
-LocationPermission permission = await Geolocator.checkPermission();
-if (permission == LocationPermission.denied) {
-  permission = await Geolocator.requestPermission();
-  if (permission == LocationPermission.denied) {
-    throw Exception('Location permissions are denied');
-  }
-}
+### iOS
 
-if (permission == LocationPermission.deniedForever) {
-  throw Exception('Location permissions are permanently denied');
-}
-```
+**Issue**: Location updates stop in background
+- Ensure `UIBackgroundModes` includes `location` in `Info.plist`
+- Request "Always" location permission
 
-#### 2. Background Service Not Starting
-- Ensure you've called `initializeBackgroundService()` before other operations
-- Check that battery optimization is disabled for your app
-- Verify background permissions are granted on Android
+**Issue**: Permission dialog not showing
+- Make sure all required keys are in `Info.plist`
+- Check that you're calling permission requests from main thread
 
-#### 3. Network Connection Issues
-```dart
-// Test connection before starting tracking
-final response = await VietmapTrackingService.instance.testConnection();
-if (!response.success) {
-  print('Connection failed: ${response.message}');
-  // Handle accordingly
-}
-```
+## Contributing
 
-#### 4. Batch Not Sending
-- Check batch size configuration (default: 5 locations)
-- Verify batch interval settings (default: 30 seconds)
-- Ensure network connectivity
-
-### Performance Tips
-
-1. **Optimize Batch Settings:**
-   ```dart
-   VietmapTrackingConfig(
-     batchSize: 20,  // Larger batches for less frequent network calls
-     batchInterval: Duration(minutes: 5),  // Longer intervals
-   )
-   ```
-
-2. **Adjust Location Accuracy:**
-   ```dart
-   // In background service configuration
-   // Lower accuracy = better battery life
-   distanceFilter: 50,  // Only send when moved 50 meters
-   ```
-
-3. **Handle Offline Scenarios:**
-   ```dart
-   VietmapTrackingService.instance.onLocationFailed((error, location) {
-     // Store failed locations locally
-     await saveLocationLocally(location);
-   });
-   ```
-
-## API Reference
-
-### VietmapTrackingPlugin
-
-Main plugin class for SDK initialization and tracking operations.
-
-#### Methods
-
-- `initialize(VietmapTrackingConfig config)` - Initialize the SDK
-- `initializeBackgroundService()` - Initialize background service
-- `startLocationTracking()` - Start background tracking
-- `stopLocationTracking()` - Stop background tracking
-- `isTrackingServiceRunning()` - Check if tracking is active
-- `sendLocation(GpsLocation location)` - Send single location
-- `testConnection()` - Test API connectivity
-- `getCachedLocationsCount()` - Get count of cached/failed locations
-- `clearCachedLocations()` - Clear cached locations
-- `setTrackingInterval(Duration interval)` - Update tracking interval dynamically
-- `getTrackingInterval()` - Get current tracking interval
-- `getCurrentConfig()` - Get current configuration
-- `setApiKey(String apiKey)` - Update API key
-- `setEndpoint(String endpoint)` - Update endpoint URL
-
-### TrackingLocation
-
-Static class that handles location processing and HTTP transmission.
-
-#### Methods
-
-- `sendDataToServer(GpsLocation data)` - Send location to server with retry logic
-- `startTracking()` - Start periodic location collection
-- `stopTracking()` - Stop location collection
-- `handleFollowUser()` - Process current location
-
-### Models
-
-#### GpsLocation
-```dart
-GpsLocation({
-  required double latitude,
-  required double longitude,
-  required double accuracy,
-  required double speed,
-  required DateTime timestamp,
-  double? altitude,
-  double? bearing,
-  Map<String, dynamic>? metadata,
-})
-```
-
-#### VietmapTrackingConfig
-```dart
-VietmapTrackingConfig({
-  required String apiKey,
-  required String endpoint,
-  int batchSize = 5,
-  Duration batchInterval = const Duration(seconds: 30),
-  Duration httpTimeout = const Duration(seconds: 15),
-  int maxRetryAttempts = 3,
-  Duration trackingInterval = const Duration(seconds: 30), // Location tracking interval
-  Map<String, dynamic>? additionalConfig,
-})
-```
-
-#### TrackingResponse
-```dart
-TrackingResponse({
-  required bool success,
-  String? message,
-  Map<String, dynamic>? data,
-  int? statusCode,
-})
-```
-
-## Examples
-
-See the [example](example/) directory for a complete sample app that demonstrates:
-
-- SDK initialization
-- Background tracking setup
-- Real-time location sending
-- Batch processing
-- Error handling
-- UI integration
-
-## Support
-
-For issues and questions:
-
-1. Check the [troubleshooting](#troubleshooting) section
-2. Review the [example app](example/)
-3. Open an issue on GitHub
+Contributions are welcome! Please feel free to submit a Pull Request.
 
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+## Support
+
+For issues, questions, or feature requests, please file an issue on [GitHub](https://github.com/vietmap-company/vietmap_tracking_plugin/issues).
+
+## Related Projects
+
+- [VietmapTrackingSDK iOS](https://github.com/vietmap-company/vietmap-tracking-sdk-ios)
+- [VietmapTrackingSDK Android](https://github.com/vietmap-company/vietmap-tracking-sdk-android)
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
