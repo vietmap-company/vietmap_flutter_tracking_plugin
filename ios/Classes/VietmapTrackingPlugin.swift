@@ -1,18 +1,21 @@
 import Flutter
 import UIKit
 import CoreLocation
+import VietmapTrackingSDK
 
-public class VietmapTrackingPlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
+public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
     // MARK: - Properties
     private var isInitialized: Bool = false
     private var apiKey: String?
     private var baseURL: String?
-    private var locationUpdateSink: FlutterEventSink?
-    private var trackingStatusSink: FlutterEventSink?
-    private var isTracking: Bool = false
-    private var trackingStartTime: Date?
+    private let trackingManager = VietmapTrackingManager.shared
     private let locationManager = CLLocationManager()
+
+    // Stream handlers — mỗi EventChannel có stream handler riêng biệt
+    // Khắc phục lỗi bản gốc dùng chung 1 FlutterStreamHandler cho 2 channel
+    private let locationStreamHandler = LocationStreamHandler()
+    private let trackingStatusStreamHandler = TrackingStatusStreamHandler()
 
     // MARK: - Plugin Registration
     public static func register(with registrar: FlutterPluginRegistrar) {
@@ -33,8 +36,85 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin, FlutterStreamHandle
 
         let instance = VietmapTrackingPlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
-        locationUpdateChannel.setStreamHandler(instance)
-        trackingStatusChannel.setStreamHandler(instance)
+        locationUpdateChannel.setStreamHandler(instance.locationStreamHandler)
+        trackingStatusChannel.setStreamHandler(instance.trackingStatusStreamHandler)
+
+        // Setup SDK callbacks sau khi đăng ký plugin
+        // (matching React Native iOS pattern: setupSDKCallbacks)
+        instance.setupSDKCallbacks()
+    }
+
+    // MARK: - SDK Callbacks Setup
+    // Theo Guide.md mục 5 — forward 5 events từ Native SDK Layer → Bridge Layer → Flutter EventChannel
+    // RN iOS bridge setup tương tự trong setupSDKCallbacks()
+    private func setupSDKCallbacks() {
+        // 1. onLocationUpdate — forward vị trí GPS real-time
+        // Guide.md: trackingManager.onLocationUpdate: ((NSDictionary) -> Void)?
+        // Payload: {latitude, longitude, altitude, accuracy, speed, bearing, timestamp}
+        trackingManager.onLocationUpdate = { [weak self] locationDict in
+            guard let self = self else { return }
+            if let dict = locationDict as? [String: Any] {
+                self.locationStreamHandler.send(event: dict)
+            }
+        }
+
+        // 2. onTrackingStatusChanged — forward trạng thái tracking
+        // Guide.md: trackingManager.onTrackingStatusChanged: ((NSDictionary) -> Void)?
+        // Payload: {isTracking, status, timestamp, ...}
+        trackingManager.onTrackingStatusChanged = { [weak self] statusDict in
+            guard let self = self else { return }
+            if let dict = statusDict as? [String: Any] {
+                self.trackingStatusStreamHandler.send(event: dict)
+            }
+        }
+
+        // 3. onError — forward lỗi location/tracking
+        // Guide.md: trackingManager.onError: ((String) -> Void)?
+        // Payload: {error, timestamp}
+        trackingManager.onError = { [weak self] errorMessage in
+            guard let self = self else { return }
+            self.locationStreamHandler.send(event: [
+                "error": errorMessage,
+                "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+            ])
+        }
+
+        // 4. onPermissionChanged — forward thay đổi quyền location
+        // Guide.md: trackingManager.onPermissionChanged: ((String) -> Void)?
+        // Payload: {status, timestamp}
+        trackingManager.onPermissionChanged = { [weak self] status in
+            guard let self = self else { return }
+            self.trackingStatusStreamHandler.send(event: [
+                "permissionStatus": status,
+                "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+            ])
+        }
+
+        // 5. onRouteUpdate — forward cập nhật tuyến đường
+        // Guide.md: trackingManager.onRouteUpdate: ((Bool, NSDictionary?) -> Void)?
+        // Payload: {success, routeData, timestamp}
+        trackingManager.onRouteUpdate = { [weak self] success, routeData in
+            guard let self = self else { return }
+            var event: [String: Any] = [
+                "success": success,
+                "timestamp": Int(Date().timeIntervalSince1970 * 1000)
+            ]
+            if let routeDict = routeData as? [String: Any] {
+                event["routeData"] = routeDict
+            }
+            self.trackingStatusStreamHandler.send(event: event)
+        }
+    }
+
+    // MARK: - Cleanup
+    // Guide.md mục 8 — iOS deinit: CHỈ xóa callbacks, KHÔNG gọi stopTracking()
+    // Matching React Native iOS deinit pattern
+    deinit {
+        trackingManager.onLocationUpdate = nil
+        trackingManager.onTrackingStatusChanged = nil
+        trackingManager.onError = nil
+        trackingManager.onPermissionChanged = nil
+        trackingManager.onRouteUpdate = nil
     }
 
     // MARK: - FlutterPlugin Methods
@@ -219,30 +299,13 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin, FlutterStreamHandle
             return
         }
 
-        isTracking = true
-        trackingStartTime = Date()
-
-        // Send status update
-        trackingStatusSink?([
-            "isTracking": true,
-            "lastLocationUpdate": NSNull(),
-            "trackingDuration": 0
-        ])
-
+        // TODO: Giai đoạn 2 — parse config từ call.arguments và gọi SDK thật
+        // Tạm resolve true để không break flow
         result(true)
     }
 
     private func stopTracking(result: @escaping FlutterResult) {
-        isTracking = false
-        trackingStartTime = nil
-
-        // Send status update
-        trackingStatusSink?([
-            "isTracking": false,
-            "lastLocationUpdate": NSNull(),
-            "trackingDuration": 0
-        ])
-
+        // TODO: Giai đoạn 2 — gọi trackingManager.stopTracking(completion:)
         result(true)
     }
 
@@ -254,6 +317,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin, FlutterStreamHandle
             return
         }
 
+        // TODO: Giai đoạn 2 — gọi trackingManager.getCurrentLocation()
         result([
             "latitude": 0.0,
             "longitude": 0.0,
@@ -266,21 +330,16 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin, FlutterStreamHandle
     }
 
     private func isTrackingActive(result: @escaping FlutterResult) {
-        result(isTracking)
+        // TODO: Giai đoạn 2 — gọi trackingManager.isTrackingActive()
+        result(false)
     }
 
     private func getTrackingStatus(result: @escaping FlutterResult) {
-        let duration: Int
-        if isTracking, let startTime = trackingStartTime {
-            duration = Int(Date().timeIntervalSince(startTime) * 1000)
-        } else {
-            duration = 0
-        }
-
+        // TODO: Giai đoạn 2 — gọi trackingManager.getTrackingStatus()
         result([
-            "isTracking": isTracking,
+            "isTracking": false,
             "lastLocationUpdate": NSNull(),
-            "trackingDuration": duration
+            "trackingDuration": 0
         ])
     }
 
@@ -295,20 +354,46 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin, FlutterStreamHandle
         result(true)
     }
 
-    // MARK: - FlutterStreamHandler
-    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        // Determine which stream based on arguments or channel
-        if locationUpdateSink == nil {
-            locationUpdateSink = events
-        } else {
-            trackingStatusSink = events
-        }
+}
+
+// MARK: - Stream Handlers
+// Mỗi EventChannel có stream handler riêng — tránh lỗi bản gốc dùng chung 1 handler
+// và phân biệt sink bằng thứ tự onListen (không tin cậy)
+
+/// Stream handler cho EventChannel "vietmap_tracking_plugin/location_updates"
+private class LocationStreamHandler: NSObject, FlutterStreamHandler {
+    private var eventSink: FlutterEventSink?
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
         return nil
     }
 
-    public func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        locationUpdateSink = nil
-        trackingStatusSink = nil
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
         return nil
+    }
+
+    func send(event: Any) {
+        eventSink?(event)
+    }
+}
+
+/// Stream handler cho EventChannel "vietmap_tracking_plugin/tracking_status"
+private class TrackingStatusStreamHandler: NSObject, FlutterStreamHandler {
+    private var eventSink: FlutterEventSink?
+
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        self.eventSink = events
+        return nil
+    }
+
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        self.eventSink = nil
+        return nil
+    }
+
+    func send(event: Any) {
+        eventSink?(event)
     }
 }
