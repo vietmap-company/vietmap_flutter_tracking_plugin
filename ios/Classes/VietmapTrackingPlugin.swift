@@ -10,7 +10,6 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     private var apiKey: String?
     private var baseURL: String?
     private let trackingManager = VietmapTrackingManager.shared
-    private let locationManager = CLLocationManager()
 
     // Stream handlers — mỗi EventChannel có stream handler riêng biệt
     // Khắc phục lỗi bản gốc dùng chung 1 FlutterStreamHandler cho 2 channel
@@ -39,18 +38,11 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         locationUpdateChannel.setStreamHandler(instance.locationStreamHandler)
         trackingStatusChannel.setStreamHandler(instance.trackingStatusStreamHandler)
 
-        // Setup SDK callbacks sau khi đăng ký plugin
-        // (matching React Native iOS pattern: setupSDKCallbacks)
         instance.setupSDKCallbacks()
     }
 
     // MARK: - SDK Callbacks Setup
-    // Theo Guide.md mục 5 — forward 5 events từ Native SDK Layer → Bridge Layer → Flutter EventChannel
-    // RN iOS bridge setup tương tự trong setupSDKCallbacks()
     private func setupSDKCallbacks() {
-        // 1. onLocationUpdate — forward vị trí GPS real-time
-        // Guide.md: trackingManager.onLocationUpdate: ((NSDictionary) -> Void)?
-        // Payload: {latitude, longitude, altitude, accuracy, speed, bearing, timestamp}
         trackingManager.onLocationUpdate = { [weak self] locationDict in
             guard let self = self else { return }
             if let dict = locationDict as? [String: Any] {
@@ -58,9 +50,6 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             }
         }
 
-        // 2. onTrackingStatusChanged — forward trạng thái tracking
-        // Guide.md: trackingManager.onTrackingStatusChanged: ((NSDictionary) -> Void)?
-        // Payload: {isTracking, status, timestamp, ...}
         trackingManager.onTrackingStatusChanged = { [weak self] statusDict in
             guard let self = self else { return }
             if let dict = statusDict as? [String: Any] {
@@ -68,9 +57,6 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             }
         }
 
-        // 3. onError — forward lỗi location/tracking
-        // Guide.md: trackingManager.onError: ((String) -> Void)?
-        // Payload: {error, timestamp}
         trackingManager.onError = { [weak self] errorMessage in
             guard let self = self else { return }
             self.locationStreamHandler.send(event: [
@@ -79,9 +65,6 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             ])
         }
 
-        // 4. onPermissionChanged — forward thay đổi quyền location
-        // Guide.md: trackingManager.onPermissionChanged: ((String) -> Void)?
-        // Payload: {status, timestamp}
         trackingManager.onPermissionChanged = { [weak self] status in
             guard let self = self else { return }
             self.trackingStatusStreamHandler.send(event: [
@@ -90,9 +73,6 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             ])
         }
 
-        // 5. onRouteUpdate — forward cập nhật tuyến đường
-        // Guide.md: trackingManager.onRouteUpdate: ((Bool, NSDictionary?) -> Void)?
-        // Payload: {success, routeData, timestamp}
         trackingManager.onRouteUpdate = { [weak self] success, routeData in
             guard let self = self else { return }
             var event: [String: Any] = [
@@ -107,8 +87,6 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     }
 
     // MARK: - Cleanup
-    // Guide.md mục 8 — iOS deinit: CHỈ xóa callbacks, KHÔNG gọi stopTracking()
-    // Matching React Native iOS deinit pattern
     deinit {
         trackingManager.onLocationUpdate = nil
         trackingManager.onTrackingStatusChanged = nil
@@ -161,6 +139,13 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         self.apiKey = apiKey
         self.baseURL = args["baseURL"] as? String
+        trackingManager.configure(apiKey: apiKey)
+
+        if let baseURL = baseURL, !baseURL.isEmpty {
+            trackingManager.configure(baseURL: baseURL)
+        }
+
+        trackingManager.setAutoUpload(enabled: true)
         isInitialized = true
         result(true)
     }
@@ -181,30 +166,27 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
                               details: nil))
             return
         }
-
+        trackingManager.configureAlertAPI(apiKey: apiKey, apiID: apiID)
         result(true)
     }
 
     // MARK: - Permission Methods
     private func hasLocationPermission() -> Bool {
-        let status: CLAuthorizationStatus
-        if #available(iOS 14.0, *) {
-            status = locationManager.authorizationStatus
-        } else {
-            status = CLLocationManager.authorizationStatus()
-        }
-        return status == .authorizedWhenInUse || status == .authorizedAlways
+        // let status: CLAuthorizationStatus
+        // if #available(iOS 14.0, *) {
+        //     status = locationManager.authorizationStatus
+        // } else {
+        //     status = CLLocationManager.authorizationStatus()
+        // }
+        // return status == .authorizedWhenInUse || status == .authorizedAlways
+        return trackingManager.hasLocationPermissions()
     }
 
     private func requestLocationPermissions(result: @escaping FlutterResult) {
-        let status: CLAuthorizationStatus
-        if #available(iOS 14.0, *) {
-            status = locationManager.authorizationStatus
-        } else {
-            status = CLLocationManager.authorizationStatus()
-        }
-
-        if status == .authorizedWhenInUse || status == .authorizedAlways {
+        trackingManager.requestLocationPermissions { [weak self] status in
+            guard self != nil else { return }
+            let granted = (status == "granted" || status == "authorized" ||
+                          status == "authorizedWhenInUse" || status == "authorizedAlways")
             result([
                 "granted": true,
                 "status": "granted",
@@ -230,30 +212,25 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     }
 
     private func hasLocationPermissions(result: @escaping FlutterResult) {
+        // let hasPermission = hasLocationPermission()
+        // let status: CLAuthorizationStatus
+        // if #available(iOS 14.0, *) {
+        //     status = locationManager.authorizationStatus
+        // } else {
+        //     status = CLLocationManager.authorizationStatus()
+        // }
         let hasPermission = hasLocationPermission()
-        let status: CLAuthorizationStatus
-        if #available(iOS 14.0, *) {
-            status = locationManager.authorizationStatus
-        } else {
-            status = CLLocationManager.authorizationStatus()
-        }
-        
         result([
             "granted": hasPermission,
             "status": hasPermission ? "granted" : "denied",
             "fineLocation": hasPermission,
             "coarseLocation": hasPermission,
-            "backgroundLocation": status == .authorizedAlways
+            "backgroundLocation": hasPermission  // iOS: mặc định = granted nếu location granted
         ])
     }
 
     private func requestAlwaysLocationPermissions(result: @escaping FlutterResult) {
-        let status: CLAuthorizationStatus
-        if #available(iOS 14.0, *) {
-            status = locationManager.authorizationStatus
-        } else {
-            status = CLLocationManager.authorizationStatus()
-        }
+        let status = CLLocationManager.authorizationStatus()
 
         switch status {
         case .authorizedAlways:
