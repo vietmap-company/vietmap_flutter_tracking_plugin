@@ -18,6 +18,8 @@ PODS:
     - FlutterMacOS
   - vietmap_tracking_plugin (0.0.1):
     - Flutter
+    - VietmapTrackingSDK (~> 1.1.6)
+  - VietmapTrackingSDK (1.1.6)
 
 DEPENDENCIES:
   - background_location_2 (from `.symlinks/plugins/background_location_2/ios`)
@@ -29,6 +31,10 @@ DEPENDENCIES:
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - vietmap_tracking_plugin (from `.symlinks/plugins/vietmap_tracking_plugin/ios`)
+
+SPEC REPOS:
+  trunk:
+    - VietmapTrackingSDK
 
 EXTERNAL SOURCES:
   background_location_2:
@@ -51,16 +57,17 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/vietmap_tracking_plugin/ios"
 
 SPEC CHECKSUMS:
-  background_location_2: 2c49acf3b57e9a907a5c7f7ceb41e64895a6d8bc
-  connectivity_plus: 2a701ffec2c0ae28a48cf7540e279787e77c447d
+  background_location_2: 738e207c87ea5ee183a4e234d5766be4cdb019a7
+  connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_background_service_ios: e30e0d3ee69e4cee66272d0c78eacd48c2e94aac
-  flutter_local_notifications: ff50f8405aaa0ccdc7dcfb9022ca192e8ad9688f
-  geolocator_apple: 66b711889fd333205763b83c9dcf0a57a28c7afd
-  integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
-  shared_preferences_foundation: fcdcbc04712aee1108ac7fda236f363274528f78
-  vietmap_tracking_plugin: ffa95da8e49aae0b76dc29cbe0efd67dc6f623c7
+  flutter_background_service_ios: 00d31bdff7b4bfe06d32375df358abe0329cf87e
+  flutter_local_notifications: a5a732f069baa862e728d839dd2ebb904737effb
+  geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
+  vietmap_tracking_plugin: e3a48b3cee806791b554d665622ae20e8e2091a4
+  VietmapTrackingSDK: a47ee86703a3a2cea313de0cb4186ba7c37ecfbe
 
 PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2

@@ -72,16 +72,15 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
       // Configure VietmapTrackingSDK with API key
       print('🔧 Configuring VietmapTrackingSDK...');
       await _controller.configure(
-        '9f2c7a4d85e1b3c6d0749e8a2f51c0db76a4e390f1b2c847',
-        // baseURL: 'https://api.vietmap.vn',
+        '0cd03613175a67f87567f86f0ba2f3b818e3a2b5f2c2634b',
       );
       print('✅ VietmapTrackingSDK configured successfully');
 
       // Configure Alert API
       print('🚨 Configuring Alert API...');
       await _controller.configureAlertAPI(
-        'YOUR_ALERT_API_KEY_HERE',
-        'YOUR_ALERT_API_ID_HERE',
+        '727494d3eb92b2f8d3a6aea1d8caf607f158bfb179776f45',
+        'a415885a-eb96-4463-8434-41afe0398f2e',
       );
       print('✅ Alert API configured successfully');
 
@@ -252,7 +251,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
       intervalMs: 5000,
       distanceFilter: 10,
       accuracy: LocationAccuracy.high,
-      backgroundMode: false,
+      backgroundMode: false, //false
       notificationTitle: 'GPS Tracking',
       notificationMessage: 'Your location is being tracked',
     );
@@ -458,30 +457,41 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
   }
 
   Future<void> _handleSpeedAlertToggle(bool enabled) async {
-    // TODO: Implement turnOnAlert and turnOffAlert methods in VietmapTrackingController
-    // For now, just show a message that this feature is not yet implemented
     try {
       if (enabled) {
-        // Turn on speed alert - NOT YET IMPLEMENTED
+        final alertStatus = await _controller.turnOnAlert();
+        setState(() {
+          _isSpeedAlertEnabled = alertStatus;
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                '⚠️ Speed Alert feature is not yet implemented in Flutter',
+                alertStatus
+                    ? '✅ Speed alert turned on'
+                    : '⚠️ Failed to turn on speed alert',
               ),
-              backgroundColor: Colors.orange,
+              backgroundColor: alertStatus ? Colors.green : Colors.orange,
             ),
           );
         }
-        // Keep the switch off since feature is not ready
-        setState(() {
-          _isSpeedAlertEnabled = false;
-        });
       } else {
-        // Turn off speed alert - NOT YET IMPLEMENTED
+        final alertStatus = await _controller.turnOffAlert();
         setState(() {
-          _isSpeedAlertEnabled = false;
+          _isSpeedAlertEnabled = !alertStatus;
         });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                alertStatus
+                    ? '✅ Speed alert turned off'
+                    : '⚠️ Failed to turn off speed alert',
+              ),
+              backgroundColor: alertStatus ? Colors.green : Colors.orange,
+            ),
+          );
+        }
       }
     } catch (error) {
       print('Error toggling speed alert: $error');
