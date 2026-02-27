@@ -12,9 +12,9 @@ class TrackingStatus {
 
   factory TrackingStatus.fromJson(Map<String, dynamic> json) {
     return TrackingStatus(
-      isTracking: json['isTracking'] as bool,
-      lastLocationUpdate: json['lastLocationUpdate'] as int?,
-      trackingDuration: json['trackingDuration'] as int,
+      isTracking: json['isTracking'] as bool? ?? false,
+      lastLocationUpdate: (json['lastLocationUpdate'] as num?)?.toInt(),
+      trackingDuration: (json['trackingDuration'] as num?)?.toInt() ?? 0,
     );
   }
 

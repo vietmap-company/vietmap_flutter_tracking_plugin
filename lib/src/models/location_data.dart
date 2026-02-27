@@ -23,11 +23,11 @@ class LocationData {
     return LocationData(
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
-      altitude: (json['altitude'] as num).toDouble(),
-      accuracy: (json['accuracy'] as num).toDouble(),
-      speed: (json['speed'] as num).toDouble(),
-      bearing: (json['bearing'] as num).toDouble(),
-      timestamp: json['timestamp'] as int,
+      altitude: (json['altitude'] as num?)?.toDouble() ?? 0.0,
+      accuracy: (json['accuracy'] as num?)?.toDouble() ?? 0.0,
+      speed: (json['speed'] as num?)?.toDouble() ?? 0.0,
+      bearing: (json['bearing'] as num?)?.toDouble() ?? 0.0,
+      timestamp: (json['timestamp'] as num?)?.toInt() ?? 0,
     );
   }
 

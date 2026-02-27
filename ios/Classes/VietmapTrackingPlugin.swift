@@ -9,10 +9,10 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     private var isInitialized: Bool = false
     private var apiKey: String?
     private var baseURL: String?
+
+    // MARK: - VietmapTrackingSDK Integration
     private let trackingManager = VietmapTrackingManager.shared
 
-    // Stream handlers — mỗi EventChannel có stream handler riêng biệt
-    // Khắc phục lỗi bản gốc dùng chung 1 FlutterStreamHandler cho 2 channel
     private let locationStreamHandler = LocationStreamHandler()
     private let trackingStatusStreamHandler = TrackingStatusStreamHandler()
 
@@ -118,8 +118,14 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             isTrackingActive(result: result)
         case "getTrackingStatus":
             getTrackingStatus(result: result)
+        case "getTrackingHealthStatus":
+            getTrackingHealthStatus(result: result)
         case "updateTrackingConfig":
             updateTrackingConfig(call, result: result)
+        case "turnOnAlert":
+            turnOnAlert(result: result)
+        case "turnOffAlert":
+            turnOffAlert(result: result)
         case "getPlatformVersion":
             result("iOS " + UIDevice.current.systemVersion)
         default:
@@ -171,66 +177,37 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     }
 
     // MARK: - Permission Methods
-    private func hasLocationPermission() -> Bool {
-        // let status: CLAuthorizationStatus
-        // if #available(iOS 14.0, *) {
-        //     status = locationManager.authorizationStatus
-        // } else {
-        //     status = CLLocationManager.authorizationStatus()
-        // }
-        // return status == .authorizedWhenInUse || status == .authorizedAlways
-        return trackingManager.hasLocationPermissions()
-    }
 
     private func requestLocationPermissions(result: @escaping FlutterResult) {
         trackingManager.requestLocationPermissions { [weak self] status in
-            guard self != nil else { return }
-            let granted = (status == "granted" || status == "authorized" ||
-                          status == "authorizedWhenInUse" || status == "authorizedAlways")
-            result([
-                "granted": true,
-                "status": "granted",
-                "fineLocation": true,
-                "coarseLocation": true,
-                "backgroundLocation": status == .authorizedAlways
-            ])
-            return
-        }
-
-        locationManager.requestWhenInUseAuthorization()
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            let hasPermission = self.hasLocationPermission()
-            result([
-                "granted": hasPermission,
-                "status": hasPermission ? "granted" : "denied",
-                "fineLocation": hasPermission,
-                "coarseLocation": hasPermission,
-                "backgroundLocation": false
-            ])
+            guard let self = self else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                let hasPermission = self.trackingManager.hasLocationPermissions()
+                result([
+                    "granted": hasPermission,
+                    "status": hasPermission ? "granted" : "denied",
+                    "fineLocation": hasPermission,
+                    "coarseLocation": hasPermission,
+                    "backgroundLocation": false
+                ])
+            }
         }
     }
 
     private func hasLocationPermissions(result: @escaping FlutterResult) {
-        // let hasPermission = hasLocationPermission()
-        // let status: CLAuthorizationStatus
-        // if #available(iOS 14.0, *) {
-        //     status = locationManager.authorizationStatus
-        // } else {
-        //     status = CLLocationManager.authorizationStatus()
-        // }
-        let hasPermission = hasLocationPermission()
+        let hasPermission = trackingManager.hasLocationPermissions()
         result([
             "granted": hasPermission,
-            "status": hasPermission ? "granted" : "denied",
+            "status": hasPermission ? "granted" : "not_granted",
             "fineLocation": hasPermission,
             "coarseLocation": hasPermission,
-            "backgroundLocation": hasPermission  // iOS: mặc định = granted nếu location granted
+            "backgroundLocation": hasPermission  
         ])
     }
 
     private func requestAlwaysLocationPermissions(result: @escaping FlutterResult) {
         let status = CLLocationManager.authorizationStatus()
+        let tempLocationManager = CLLocationManager()
 
         switch status {
         case .authorizedAlways:
@@ -238,22 +215,44 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
 
         case .authorizedWhenInUse:
-            locationManager.requestAlwaysAuthorization()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            tempLocationManager.requestAlwaysAuthorization()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
                 let newStatus: CLAuthorizationStatus
                 if #available(iOS 14.0, *) {
-                    newStatus = self.locationManager.authorizationStatus
+                    newStatus = tempLocationManager.authorizationStatus
                 } else {
                     newStatus = CLLocationManager.authorizationStatus()
                 }
-                result(newStatus == .authorizedAlways ? "granted" : "denied")
+                switch newStatus {
+                case .authorizedAlways:
+                    result("granted")
+                case .authorizedWhenInUse:
+                    result("when_in_use")
+                case .denied, .restricted:
+                    result("denied")
+                default:
+                    result("denied")
+                }
             }
 
         case .notDetermined:
-            locationManager.requestAlwaysAuthorization()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                result(self.hasLocationPermission() ? "granted" : "denied")
+            tempLocationManager.requestAlwaysAuthorization()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                let newStatus = CLLocationManager.authorizationStatus()
+                switch newStatus {
+                case .authorizedAlways:
+                    result("granted")
+                case .authorizedWhenInUse:
+                    result("when_in_use")
+                case .denied:
+                    result("denied")
+                default:
+                    result("denied")
+                }
             }
+
+        case .denied, .restricted:
+            result("denied")
 
         default:
             result("denied")
@@ -261,6 +260,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     }
 
     // MARK: - Tracking Methods
+    
     private func startTracking(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         guard isInitialized else {
             result(FlutterError(code: "SDK_NOT_INITIALIZED",
@@ -269,23 +269,52 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        guard hasLocationPermission() else {
+        guard trackingManager.hasLocationPermissions() else {
             result(FlutterError(code: "PERMISSION_DENIED",
                               message: "Location permission not granted",
                               details: nil))
             return
         }
 
-        // TODO: Giai đoạn 2 — parse config từ call.arguments và gọi SDK thật
-        // Tạm resolve true để không break flow
-        result(true)
+        let args = call.arguments as? [String: Any]
+        let backgroundMode = args?["backgroundMode"] as? Bool ?? true
+        let intervalMs = args?["intervalMs"] as? Int ?? 5000
+        let distanceFilter = args?["distanceFilter"] as? Double ?? 10.0
+
+        trackingManager.startTracking(
+            enhancedBackgroundMode: backgroundMode,
+            intervalMs: intervalMs,
+            distanceFilter: distanceFilter
+        ) { success, message in
+            DispatchQueue.main.async {
+                if success {
+                    result(true)
+                } else {
+                    result(false)
+                }
+            }
+        }
     }
 
     private func stopTracking(result: @escaping FlutterResult) {
-        // TODO: Giai đoạn 2 — gọi trackingManager.stopTracking(completion:)
-        result(true)
-    }
+        guard isInitialized else {
+            result(FlutterError(code: "SDK_NOT_INITIALIZED",
+                              message: "VietmapTrackingSDK not initialized",
+                              details: nil))
+            return
+        }
 
+         trackingManager.stopTracking { success, message in
+            DispatchQueue.main.async {
+                if success {
+                    result(true)
+                } else {
+                    result(false)
+                }
+            }
+        }
+    }
+    // MARK: - Location Methods
     private func getCurrentLocation(result: @escaping FlutterResult) {
         guard isInitialized else {
             result(FlutterError(code: "SDK_NOT_INITIALIZED",
@@ -294,33 +323,66 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        // TODO: Giai đoạn 2 — gọi trackingManager.getCurrentLocation()
-        result([
-            "latitude": 0.0,
-            "longitude": 0.0,
-            "altitude": 0.0,
-            "accuracy": 0.0,
-            "speed": 0.0,
-            "bearing": 0.0,
-            "timestamp": Int(Date().timeIntervalSince1970 * 1000)
-        ])
+        if let location = trackingManager.getCurrentLocation() {
+            result(location)
+        } else {
+            result(FlutterError(code: "LOCATION_UNAVAILABLE",
+                              message: "Unable to get current location",
+                              details: nil))
+        }
     }
 
     private func isTrackingActive(result: @escaping FlutterResult) {
-        // TODO: Giai đoạn 2 — gọi trackingManager.isTrackingActive()
-        result(false)
+        let status = trackingManager.isTrackingActive()
+        result(status)
     }
 
     private func getTrackingStatus(result: @escaping FlutterResult) {
-        // TODO: Giai đoạn 2 — gọi trackingManager.getTrackingStatus()
-        result([
-            "isTracking": false,
-            "lastLocationUpdate": NSNull(),
-            "trackingDuration": 0
-        ])
+        let status = trackingManager.getTrackingStatus()
+        result(status)
     }
 
-    private func updateTrackingConfig(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    private func getTrackingHealthStatus(result: @escaping FlutterResult) {
+        let healthStatus = trackingManager.getTrackingHealthStatus()
+        result(healthStatus)
+    }
+    
+    // MARK: - Alert Methods
+    private func turnOnAlert (result: @escaping FlutterResult) {
+        guard isInitialized else {
+            result(FlutterError(code: "SDK_NOT_INITIALIZED",
+                              message: "VietmapTrackingSDK not initialized",
+                              details: nil))
+            return
+        }
+
+        trackingManager.turnOnAlert { success in
+            DispatchQueue.main.async {
+                result(success)
+            }
+        }
+    }
+
+    private func turnOffAlert (result: @escaping FlutterResult) {
+        guard isInitialized else {
+            result(FlutterError(code: "SDK_NOT_INITIALIZED",
+                              message: "VietmapTrackingSDK not initialized",
+                              details: nil))
+            return
+        }
+
+        trackingManager.turnOffAlert { success in
+            DispatchQueue.main.async {
+                result(success)
+            }
+        }
+    }
+
+    // MARK: - Legacy Support Methods (kept for backward compatibility)
+
+    private func updateTrackingConfig(
+        _ call: FlutterMethodCall, 
+        result: @escaping FlutterResult) {
         guard isInitialized else {
             result(FlutterError(code: "SDK_NOT_INITIALIZED",
                               message: "VietmapTrackingSDK not initialized",
@@ -330,14 +392,12 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         result(true)
     }
+    
 
 }
 
 // MARK: - Stream Handlers
-// Mỗi EventChannel có stream handler riêng — tránh lỗi bản gốc dùng chung 1 handler
-// và phân biệt sink bằng thứ tự onListen (không tin cậy)
 
-/// Stream handler cho EventChannel "vietmap_tracking_plugin/location_updates"
 private class LocationStreamHandler: NSObject, FlutterStreamHandler {
     private var eventSink: FlutterEventSink?
 

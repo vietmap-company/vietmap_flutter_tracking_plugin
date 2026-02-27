@@ -193,6 +193,30 @@ class VietmapTrackingController {
     }
   }
 
+  /// Turn on speed alert
+  /// 
+  /// Returns [true] if alert was turned on successfully
+  Future<bool> turnOnAlert() async {
+    try {
+      return await _platform.turnOnAlert();
+    } catch (e) {
+      print('Failed to turn on alert: $e');
+      return false;
+    }
+  }
+
+  /// Turn off speed alert
+  /// 
+  /// Returns [true] if alert was turned off successfully
+  Future<bool> turnOffAlert() async {
+    try {
+      return await _platform.turnOffAlert();
+    } catch (e) {
+      print('Failed to turn off alert: $e');
+      return false;
+    }
+  }
+  
   /// Stream of location updates
   ///
   /// Subscribe to receive real-time location updates while tracking

@@ -35,6 +35,10 @@ abstract class VietmapTrackingPlatform extends PlatformInterface {
   Future<TrackingStatus> getTrackingStatus();
   Future<bool> updateTrackingConfig(LocationTrackingConfig config);
 
+
+  // Alert methods
+  Future<bool> turnOnAlert();
+  Future<bool> turnOffAlert();
   // Event streams
   Stream<LocationData> get onLocationUpdate;
   Stream<TrackingStatus> get onTrackingStatusChanged;

@@ -163,6 +163,25 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   }
 
   @override
+  Future<bool> turnOnAlert() async {
+    try {      final result = await _channel.invokeMethod<bool>('turnOnAlert');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      throw Exception('Failed to turn on alert: ${e.message}');
+    } 
+  }
+
+  @override
+  Future<bool> turnOffAlert() async {
+    try {
+      final result = await _channel.invokeMethod<bool>('turnOffAlert');
+      return result ?? false;
+    } on PlatformException catch (e) {
+      throw Exception('Failed to turn off alert: ${e.message}');
+    }
+  }
+  
+  @override
   Stream<LocationData> get onLocationUpdate {
     return _locationUpdateChannel.receiveBroadcastStream().map((event) {
       final data = Map<String, dynamic>.from(event as Map);
