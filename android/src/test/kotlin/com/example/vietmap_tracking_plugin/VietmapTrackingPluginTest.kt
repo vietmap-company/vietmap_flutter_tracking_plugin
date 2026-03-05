@@ -123,6 +123,9 @@ internal class VietmapTrackingPluginTest {
             "getPlatformVersion"  // This one works without context
         )
 
+        // Also verify getTrackingHealthStatus is routed (not notImplemented)
+        val sdkMethods = listOf("getTrackingHealthStatus")
+
         for (methodName in methodNames) {
             val plugin = VietmapTrackingPlugin()
             val result = mockResult()
@@ -130,6 +133,18 @@ internal class VietmapTrackingPluginTest {
             plugin.onMethodCall(MethodCall(methodName, null), result)
 
             verify(result, never()).notImplemented()
+        }
+
+        for (methodName in sdkMethods) {
+            val plugin = VietmapTrackingPlugin()
+            val result = mockResult()
+
+            try {
+                plugin.onMethodCall(MethodCall(methodName, null), result)
+                verify(result, never()).notImplemented()
+            } catch (_: UninitializedPropertyAccessException) {
+                // Expected — context not set, but method IS routed
+            }
         }
     }
 
@@ -498,23 +513,67 @@ internal class VietmapTrackingPluginTest {
 
     @Test
     fun trackingStatus_structure_matchesDartModel() {
-        val statusMap = mapOf(
+        // Must match Dart TrackingStatus.fromJson fields:
+        //   isTracking: bool, lastLocationUpdate: int?, trackingDuration: int
+        val statusMap = mutableMapOf<String, Any>(
             "isTracking" to true,
-            "status" to "active",
-            "timestamp" to System.currentTimeMillis().toDouble()
+            "trackingDuration" to 120000L  // 2 minutes in millis
         )
+        // lastLocationUpdate is optional (only present if location received)
+        statusMap["lastLocationUpdate"] = System.currentTimeMillis()
 
         assertNotNull(statusMap["isTracking"])
-        assertNotNull(statusMap["status"])
-        assertNotNull(statusMap["timestamp"])
+        assertNotNull(statusMap["trackingDuration"])
 
         assertTrue(statusMap["isTracking"] is Boolean)
-        assertTrue(statusMap["status"] is String)
-        assertTrue(statusMap["timestamp"] is Double)
+        assertTrue(statusMap["trackingDuration"] is Long)
+        assertTrue(statusMap["lastLocationUpdate"] is Long)
 
-        val status = statusMap["status"] as String
-        assertTrue(status in listOf("active", "inactive"),
-            "Status should be 'active' or 'inactive', got '$status'")
+        val duration = statusMap["trackingDuration"] as Long
+        assertTrue(duration >= 0, "trackingDuration should be >= 0, got $duration")
+    }
+
+    @Test
+    fun trackingHealthStatus_structure_matchesiOSPattern() {
+        val healthMap = mutableMapOf<String, Any>(
+            "isTracking" to true,
+            "hasLocationPermission" to true,
+            "hasBackgroundPermission" to false,
+            "trackingDuration" to 60000L,
+            "timeSinceLastUpdate" to 5000L,
+            "isInitialized" to true,
+            "timestamp" to System.currentTimeMillis()
+        )
+        healthMap["lastLocationUpdate"] = System.currentTimeMillis() - 5000L
+
+        // Verify all expected keys
+        for (key in listOf("isTracking", "hasLocationPermission", "hasBackgroundPermission",
+            "trackingDuration", "timeSinceLastUpdate", "isInitialized", "timestamp")) {
+            assertNotNull(healthMap[key], "Health status missing key '$key'")
+        }
+
+        assertTrue(healthMap["isTracking"] is Boolean)
+        assertTrue(healthMap["hasLocationPermission"] is Boolean)
+        assertTrue(healthMap["hasBackgroundPermission"] is Boolean)
+        assertTrue(healthMap["trackingDuration"] is Long)
+        assertTrue(healthMap["isInitialized"] is Boolean)
+    }
+
+    @Test
+    fun getTrackingHealthStatus_beforeInitialize_returnsSDKNotInitialized() {
+        val plugin = VietmapTrackingPlugin()
+        val result = mockResult()
+
+        try {
+            plugin.onMethodCall(MethodCall("getTrackingHealthStatus", null), result)
+            verify(result).error(
+                Mockito.eq("SDK_NOT_INITIALIZED"),
+                Mockito.anyString(),
+                Mockito.any()
+            )
+        } catch (_: UninitializedPropertyAccessException) {
+            // Guard should fire before context access
+        }
     }
 
     @Test

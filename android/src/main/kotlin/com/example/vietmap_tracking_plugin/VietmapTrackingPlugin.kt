@@ -20,6 +20,8 @@ import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
 import com.vietmap.trackingsdk.VietmapTrackingSDK
 import com.vietmap.trackingsdk.TrackingConfig
+import com.vietmap.trackingsdk.VMLocation
+import com.vietmap.trackingsdk.VietmapTrackingManager
 
 /**
  * VietmapTrackingPlugin - Flutter bridge for VietmapTrackingSDK (Android)
@@ -54,9 +56,17 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private lateinit var vietmapSDK: VietmapTrackingSDK
     private var isInitialized: Boolean = false
 
+    // Tracking state for duration/last update (matching iOS SDK behavior)
+    private var trackingStartTime: Long = 0L
+    private var lastLocationTimestamp: Long = 0L
+
     // EventChannel stream handlers
     private val locationStreamHandler = StreamHandler()
     private val trackingStatusStreamHandler = StreamHandler()
+
+    // SDK callback references (stored so we can remove them later)
+    private var locationCallback: VietmapTrackingSDK.LocationUpdateCallback? = null
+    private var statusCallback: VietmapTrackingSDK.TrackingStatusCallback? = null
 
     // Permission handling
     private var pendingPermissionResult: Result? = null
@@ -94,7 +104,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         // Initialize VietmapTrackingSDK instance (not configured until configure() is called)
         try {
             vietmapSDK = VietmapTrackingSDK.getInstance(context)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             isInitialized = false
         }
     }
@@ -123,70 +133,46 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
      * "Android bridge KHÔNG setup event callbacks cho location/tracking/error/route"
      */
     private fun setupSDKCallbacks() {
+        // Remove old callbacks if any
+        clearSDKCallbacks()
+
         // onLocationUpdate → location EventChannel
-        vietmapSDK.onLocationUpdate = { locationData ->
+        locationCallback = VietmapTrackingSDK.LocationUpdateCallback { location ->
+            lastLocationTimestamp = System.currentTimeMillis()
             mainHandler.post {
-                if (locationData is Map<*, *>) {
-                    locationStreamHandler.send(locationData)
-                }
+                val locationData = mapOf(
+                    "latitude" to location.latitude,
+                    "longitude" to location.longitude,
+                    "accuracy" to location.accuracy,
+                    "speed" to location.speed,
+                    "bearing" to location.bearing,
+                    "timestamp" to location.timestamp
+                )
+                locationStreamHandler.send(locationData)
             }
         }
+        vietmapSDK.addLocationCallback(locationCallback!!)
 
         // onTrackingStatusChanged → tracking status EventChannel
-        vietmapSDK.onTrackingStatusChanged = { statusData ->
+        statusCallback = VietmapTrackingSDK.TrackingStatusCallback { isTracking, message ->
             mainHandler.post {
-                if (statusData is Map<*, *>) {
-                    trackingStatusStreamHandler.send(statusData)
-                }
-            }
-        }
-
-        // onError → send as error event on location channel
-        vietmapSDK.onError = { errorMessage ->
-            mainHandler.post {
-                locationStreamHandler.send(
-                    mapOf(
-                        "error" to errorMessage,
-                        "timestamp" to System.currentTimeMillis()
-                    )
-                )
-            }
-        }
-
-        // onPermissionChanged → send on tracking status channel
-        vietmapSDK.onPermissionChanged = { status ->
-            mainHandler.post {
-                trackingStatusStreamHandler.send(
-                    mapOf(
-                        "permissionStatus" to status,
-                        "timestamp" to System.currentTimeMillis()
-                    )
-                )
-            }
-        }
-
-        // onRouteUpdate → send on tracking status channel
-        vietmapSDK.onRouteUpdate = { success, routeData ->
-            mainHandler.post {
-                val event = mutableMapOf<String, Any>(
-                    "success" to success,
+                val statusData = mapOf(
+                    "isTracking" to isTracking,
+                    "message" to message,
                     "timestamp" to System.currentTimeMillis()
                 )
-                if (routeData is Map<*, *>) {
-                    event["routeData"] = routeData
-                }
-                trackingStatusStreamHandler.send(event)
+                trackingStatusStreamHandler.send(statusData)
             }
         }
+        vietmapSDK.addStatusCallback(statusCallback!!)
     }
 
     private fun clearSDKCallbacks() {
         try {
-            vietmapSDK.onLocationUpdate = null
-            vietmapSDK.onTrackingStatusChanged = null
-            vietmapSDK.onError = null
-            vietmapSDK.onPermissionChanged = null
-            vietmapSDK.onRouteUpdate = null
+            locationCallback?.let { vietmapSDK.removeLocationCallback(it) }
+            statusCallback?.let { vietmapSDK.removeStatusCallback(it) }
+            locationCallback = null
+            statusCallback = null
         } catch (_: Exception) {
         }
     }
@@ -212,6 +198,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             "getCurrentLocation" -> handleGetCurrentLocation(result)
             "isTrackingActive" -> handleIsTrackingActive(result)
             "getTrackingStatus" -> handleGetTrackingStatus(result)
+            "getTrackingHealthStatus" -> handleGetTrackingHealthStatus(result)
             "updateTrackingConfig" -> handleUpdateTrackingConfig(call, result)
 
             // Alert
@@ -232,8 +219,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * configure(apiKey, baseURL?)
      *
-     * Matches RN: configure(apiKey, baseURL?, promise)
-     * Matches iOS: configure(_ call, result)
      */
     private fun handleConfigure(call: MethodCall, result: Result) {
         try {
@@ -245,7 +230,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 return
             }
 
-            // Initialize VietmapTrackingSDK with API key (RN pattern)
+            // Initialize VietmapTrackingSDK with API key 
             if (!baseURL.isNullOrEmpty()) {
                 vietmapSDK.initialize(apiKey, baseURL)
             } else {
@@ -254,7 +239,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
             isInitialized = true
 
-            // Setup SDK event callbacks after initialization (iOS pattern)
+            // Setup SDK event callbacks after initialization 
             setupSDKCallbacks()
 
             result.success(true)
@@ -272,8 +257,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * configureAlertAPI(apiKey, apiID)
      *
-     * Matches RN: configureAlertAPI(apiKey, apiID, promise)
-     * Matches iOS: configureAlertAPI(_ call, result)
      */
     private fun handleConfigureAlertAPI(call: MethodCall, result: Result) {
         if (!isInitialized) {
@@ -333,8 +316,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * requestLocationPermissions() → PermissionResult
      *
-     * Matches RN: requestLocationPermissions(promise)
-     * Returns: { granted, status, fineLocation, coarseLocation, backgroundLocation }
      */
     private fun handleRequestLocationPermissions(result: Result) {
         val currentActivity = activity
@@ -361,7 +342,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         // Store pending result
         pendingPermissionResult = result
 
-        // Request permissions (RN pattern: request basic + background together)
+        // Request permissions 
         val permissions = mutableListOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
@@ -381,8 +362,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * hasLocationPermissions() → PermissionResult
      *
-     * Matches RN: hasLocationPermissions(promise)
-     * Returns: { granted, status, fineLocation, coarseLocation, backgroundLocation }
      */
     private fun handleHasLocationPermissions(result: Result) {
         val fineLocation = ContextCompat.checkSelfPermission(
@@ -410,8 +389,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * requestAlwaysLocationPermissions() → String ("granted"/"denied"/"when_in_use")
      *
-     * Matches RN: requestAlwaysLocationPermissions(promise)
-     * Android-specific: 2-step process — basic permissions first, then background
      */
     private fun handleRequestAlwaysLocationPermissions(result: Result) {
         val currentActivity = activity
@@ -457,7 +434,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         }
 
         // Basic permissions granted, need background (Android 10+)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && !hasBackground) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             pendingAlwaysPermissionResult = result
 
             ActivityCompat.requestPermissions(
@@ -468,7 +445,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             return
         }
 
-        // All permissions granted
+        // All permissions granted (pre-Android 10, background is implicit)
         result.success("granted")
     }
 
@@ -591,9 +568,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * startTracking(config) → bool
      *
-     * Matches RN: startTracking(backgroundMode, intervalMs, distanceFilter,
-     *                           notificationTitle?, notificationMessage?, promise)
-     * Matches iOS: startTracking(_ call, result)
      */
     private fun handleStartTracking(call: MethodCall, result: Result) {
         if (!isInitialized) {
@@ -615,7 +589,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             val notificationTitle = args?.get("notificationTitle") as? String
             val notificationMessage = args?.get("notificationMessage") as? String
 
-            // Set notification parameters if provided (RN pattern)
+            // Set notification parameters if provided 
             if (!notificationTitle.isNullOrEmpty()) {
                 vietmapSDK.setNotificationTitle(notificationTitle)
             }
@@ -623,7 +597,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 vietmapSDK.setNotificationText(notificationMessage)
             }
 
-            // Configure tracking settings (RN pattern)
+            // Configure tracking settings 
             val trackingConfig = TrackingConfig().apply {
                 updateInterval = intervalMs
                 minDistanceFilter = distanceFilter
@@ -633,9 +607,10 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
             // Start tracking
             vietmapSDK.startTracking()
+            trackingStartTime = System.currentTimeMillis()
             result.success(true)
 
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             result.success(false)
         }
     }
@@ -643,8 +618,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * stopTracking() → bool
      *
-     * Matches RN: stopTracking(promise)
-     * Matches iOS: stopTracking(result)
      */
     private fun handleStopTracking(result: Result) {
         if (!isInitialized) {
@@ -654,8 +627,10 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
         try {
             vietmapSDK.stopTracking()
+            trackingStartTime = 0L
+            lastLocationTimestamp = 0L
             result.success(true)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             result.success(false)
         }
     }
@@ -665,9 +640,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
      *
      * Matches iOS: trackingManager.getCurrentLocation() -> NSDictionary?
      *
-     * NOTE from Guide.md: "Android hiện trả dummy data!"
-     * The RN bridge returns hardcoded 0.0 values because VietmapTrackingSDK
-     * Android may not have getCurrentLocation(). We follow the same pattern.
+     * Uses VietmapTrackingSDK.getLastLocation() to return the most recent known location.
      */
     private fun handleGetCurrentLocation(result: Result) {
         if (!isInitialized) {
@@ -676,16 +649,20 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         }
 
         try {
-            val locationMap = mapOf(
-                "latitude" to 0.0,
-                "longitude" to 0.0,
-                "accuracy" to 0.0,
-                "altitude" to 0.0,
-                "bearing" to 0.0,
-                "speed" to 0.0,
-                "timestamp" to System.currentTimeMillis()
-            )
-            result.success(locationMap)
+            val location: VMLocation? = vietmapSDK.getLastLocation();
+            if (location != null) {
+                val locationMap = mapOf(
+                    "latitude" to location.latitude,
+                    "longitude" to location.longitude,
+                    "accuracy" to location.accuracy,
+                    "speed" to location.speed,
+                    "bearing" to location.bearing,
+                    "timestamp" to location.timestamp
+                )
+                result.success(locationMap)
+            } else {
+                result.error("LOCATION_UNAVAILABLE", "No location available yet", null)
+            }
         } catch (e: Exception) {
             result.error("LOCATION_UNAVAILABLE", "Unable to get current location: ${e.message}", null)
         }
@@ -694,8 +671,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * isTrackingActive() → bool
      *
-     * Matches RN: isTrackingActive(promise)
-     * Matches iOS: trackingManager.isTrackingActive()
      */
     private fun handleIsTrackingActive(result: Result) {
         if (!isInitialized) {
@@ -706,7 +681,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         try {
             val isActive = vietmapSDK.isTracking()
             result.success(isActive)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             result.success(false)
         }
     }
@@ -714,10 +689,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * getTrackingStatus() → TrackingStatus map
      *
-     * Matches RN: getTrackingStatus(promise)
-     * Matches iOS: trackingManager.getTrackingStatus() -> NSDictionary
-     *
-     * NOTE from Guide.md: "Android bridge tự tạo dict từ vietmapSDK.isTracking()"
      */
     private fun handleGetTrackingStatus(result: Result) {
         if (!isInitialized) {
@@ -727,12 +698,22 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
         try {
             val isActive = vietmapSDK.isTracking()
+            val now = System.currentTimeMillis()
 
-            val status = mapOf(
+            val duration = if (isActive && trackingStartTime > 0L) {
+                (now - trackingStartTime)
+            } else {
+                0L
+            }
+
+            val status = mutableMapOf<String, Any>(
                 "isTracking" to isActive,
-                "status" to if (isActive) "active" else "inactive",
-                "timestamp" to System.currentTimeMillis().toDouble()
+                "trackingDuration" to duration
             )
+
+            if (lastLocationTimestamp > 0L) {
+                status["lastLocationUpdate"] = lastLocationTimestamp
+            }
 
             result.success(status)
         } catch (e: Exception) {
@@ -741,12 +722,62 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     }
 
     /**
+     * getTrackingHealthStatus() → Map
+     *
+     * Matches iOS: trackingManager.getTrackingHealthStatus()
+     * Returns health diagnostics about the tracking system.
+     */
+    private fun handleGetTrackingHealthStatus(result: Result) {
+        if (!isInitialized) {
+            result.error("SDK_NOT_INITIALIZED", "VietmapTrackingSDK not initialized", null)
+            return
+        }
+
+        try {
+            val isActive = vietmapSDK.isTracking()
+            val now = System.currentTimeMillis()
+            val hasPermission = hasLocationPermission()
+            val hasBackgroundPermission = hasBackgroundLocationPermission()
+
+            val duration = if (isActive && trackingStartTime > 0L) {
+                (now - trackingStartTime)
+            } else {
+                0L
+            }
+
+            val timeSinceLastUpdate = if (lastLocationTimestamp > 0L) {
+                (now - lastLocationTimestamp)
+            } else {
+                -1L  // No location received yet
+            }
+
+            val healthStatus = mutableMapOf<String, Any>(
+                "isTracking" to isActive,
+                "hasLocationPermission" to hasPermission,
+                "hasBackgroundPermission" to hasBackgroundPermission,
+                "trackingDuration" to duration,
+                "timeSinceLastUpdate" to timeSinceLastUpdate,
+                "isInitialized" to isInitialized,
+                "timestamp" to now
+            )
+
+            if (lastLocationTimestamp > 0L) {
+                healthStatus["lastLocationUpdate"] = lastLocationTimestamp
+            }
+
+            result.success(healthStatus)
+        } catch (e: Exception) {
+            result.error(
+                "HEALTH_STATUS_ERROR",
+                "Failed to get tracking health status: ${e.message}",
+                null
+            )
+        }
+    }
+
+    /**
      * updateTrackingConfig(config) → bool
      *
-     * Matches RN: updateTrackingConfig(config, promise)
-     *
-     * NOTE from Guide.md: "Android thực sự gọi SDK update"
-     * (unlike iOS which only saves locally)
      */
     private fun handleUpdateTrackingConfig(call: MethodCall, result: Result) {
         if (!isInitialized) {
@@ -787,8 +818,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * turnOnAlert() → bool
      *
-     * Matches RN: vietmapSDK.startAlert() → Boolean (synchronous)
-     * Matches iOS: trackingManager.turnOnAlert { success in ... } (async)
      */
     private fun handleTurnOnAlert(result: Result) {
         if (!isInitialized) {
@@ -799,7 +828,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         try {
             val success = vietmapSDK.startAlert()
             result.success(success)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             result.success(false)
         }
     }
@@ -807,8 +836,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     /**
      * turnOffAlert() → bool
      *
-     * Matches RN: vietmapSDK.stopAlert() → Boolean (synchronous)
-     * Matches iOS: trackingManager.turnOffAlert { success in ... } (async)
      */
     private fun handleTurnOffAlert(result: Result) {
         if (!isInitialized) {
@@ -819,7 +846,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         try {
             val success = vietmapSDK.stopAlert()
             result.success(success)
-        } catch (e: Exception) {
+        } catch (_: Exception) {
             result.success(false)
         }
     }
@@ -853,7 +880,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
 /**
  * Generic stream handler for EventChannels.
- * Matches the iOS LocationStreamHandler / TrackingStatusStreamHandler pattern.
  */
 private class StreamHandler : EventChannel.StreamHandler {
     private var eventSink: EventChannel.EventSink? = null

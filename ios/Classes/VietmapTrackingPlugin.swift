@@ -380,6 +380,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
     // MARK: - Legacy Support Methods (kept for backward compatibility)
 
+    /// updateTrackingConfig(config) → bool
+    ///
     private func updateTrackingConfig(
         _ call: FlutterMethodCall, 
         result: @escaping FlutterResult) {
@@ -390,7 +392,30 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        result(true)
+        let args = call.arguments as? [String: Any]
+        let backgroundMode = args?["backgroundMode"] as? Bool ?? true
+        let intervalMs = args?["intervalMs"] as? Int ?? 5000
+        let distanceFilter = args?["distanceFilter"] as? Double ?? 10.0
+
+        let wasTracking = trackingManager.isTrackingActive()
+
+        if wasTracking {
+            trackingManager.stopTracking { [weak self] stopSuccess, _ in
+                guard let self = self else { return }
+                self.trackingManager.startTracking(
+                    enhancedBackgroundMode: backgroundMode,
+                    intervalMs: intervalMs,
+                    distanceFilter: distanceFilter
+                ) { startSuccess, _ in
+                    DispatchQueue.main.async {
+                        result(startSuccess)
+                    }
+                }
+            }
+        } else {
+            // Not tracking — just acknowledge config received
+            result(true)
+        }
     }
     
 

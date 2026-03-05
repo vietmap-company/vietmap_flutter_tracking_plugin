@@ -193,8 +193,32 @@ class VietmapTrackingController {
     }
   }
 
+  /// Get tracking health diagnostics
+  ///
+  /// Returns a map with health information including:
+  /// - isTracking: whether tracking is active
+  /// - hasLocationPermission: location permission status
+  /// - hasBackgroundPermission: background permission status
+  /// - trackingDuration: how long tracking has been active (ms)
+  /// - timeSinceLastUpdate: time since last location update (ms)
+  /// - isInitialized: whether SDK is initialized
+  Future<Map<String, dynamic>> getTrackingHealthStatus() async {
+    if (!_isConfigured) {
+      throw Exception(
+        'VietmapTrackingSDK not configured. Call configure() first.',
+      );
+    }
+
+    try {
+      return await _platform.getTrackingHealthStatus();
+    } catch (e) {
+      print('Failed to get tracking health status: $e');
+      rethrow;
+    }
+  }
+
   /// Turn on speed alert
-  /// 
+  ///
   /// Returns [true] if alert was turned on successfully
   Future<bool> turnOnAlert() async {
     try {
@@ -206,7 +230,7 @@ class VietmapTrackingController {
   }
 
   /// Turn off speed alert
-  /// 
+  ///
   /// Returns [true] if alert was turned off successfully
   Future<bool> turnOffAlert() async {
     try {
@@ -216,7 +240,7 @@ class VietmapTrackingController {
       return false;
     }
   }
-  
+
   /// Stream of location updates
   ///
   /// Subscribe to receive real-time location updates while tracking

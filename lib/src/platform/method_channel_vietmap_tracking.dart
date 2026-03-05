@@ -163,12 +163,28 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   }
 
   @override
+  Future<Map<String, dynamic>> getTrackingHealthStatus() async {
+    try {
+      final result = await _channel.invokeMethod<Map<Object?, Object?>>(
+        'getTrackingHealthStatus',
+      );
+      if (result == null) {
+        throw Exception('Null result from getTrackingHealthStatus');
+      }
+      return Map<String, dynamic>.from(result);
+    } on PlatformException catch (e) {
+      throw Exception('Failed to get tracking health status: ${e.message}');
+    }
+  }
+
+  @override
   Future<bool> turnOnAlert() async {
-    try {      final result = await _channel.invokeMethod<bool>('turnOnAlert');
+    try {
+      final result = await _channel.invokeMethod<bool>('turnOnAlert');
       return result ?? false;
     } on PlatformException catch (e) {
       throw Exception('Failed to turn on alert: ${e.message}');
-    } 
+    }
   }
 
   @override
@@ -180,7 +196,7 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
       throw Exception('Failed to turn off alert: ${e.message}');
     }
   }
-  
+
   @override
   Stream<LocationData> get onLocationUpdate {
     return _locationUpdateChannel.receiveBroadcastStream().map((event) {

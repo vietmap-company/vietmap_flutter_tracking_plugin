@@ -21,13 +21,6 @@ private const val ALERT_API_ID = "a415885a-eb96-4463-8434-41afe0398f2e"
 /**
  * Instrumented tests for VietmapTrackingPlugin — Android bridge layer.
  *
- * These tests run on a REAL Android device/emulator with the actual
- * VietmapTrackingSDK, matching the pattern from iOS RunnerTests.swift.
- *
- * ⚠️ Unlike unit tests, these tests have access to a real Context and
- * can call VietmapTrackingSDK methods. However, permission-related tests
- * may behave differently in test environments.
- *
  * Run: ./gradlew app:connectedAndroidTest  (from example/android/)
  *
  * Test categories (matching iOS RunnerTests.swift):
@@ -62,19 +55,7 @@ class VietmapTrackingPluginInstrumentedTest {
     // Helper: invoke a method call and capture the result synchronously
     // ============================================================
 
-    /**
-     * Invokes a plugin method and returns the result.
-     * Uses a CountDownLatch for synchronous waiting (Android equivalent
-     * of iOS XCTestExpectation).
-     *
-     * Note: The plugin requires onAttachedToEngine to be called for most
-     * methods. For tests that only need onMethodCall routing, we create
-     * a raw plugin instance. For tests that need the full SDK, we'd need
-     * to register with a FlutterEngine — which is complex in androidTest.
-     *
-     * For this reason, we test the public onMethodCall interface directly,
-     * and accept that methods requiring context will throw or error.
-     */
+    
     private fun invokeMethod(
         plugin: VietmapTrackingPlugin,
         methodName: String,
@@ -106,7 +87,6 @@ class VietmapTrackingPluginInstrumentedTest {
         try {
             plugin.onMethodCall(MethodCall(methodName, arguments), result)
         } catch (e: UninitializedPropertyAccessException) {
-            // context/SDK not initialized — expected for many tests
             return InvokeResult(
                 success = null,
                 error = Triple("UNINITIALIZED", e.message, null),
@@ -190,8 +170,6 @@ class VietmapTrackingPluginInstrumentedTest {
 
     // ============================================================
     // 3. configure — argument validation
-    //    (SDK calls may fail without proper FlutterEngine,
-    //     but argument validation should still work)
     // ============================================================
 
     @Test
@@ -199,8 +177,6 @@ class VietmapTrackingPluginInstrumentedTest {
         val plugin = VietmapTrackingPlugin()
         val result = invokeMethod(plugin, "configure", mapOf<String, Any>())
 
-        // Should fail with INVALID_ARGUMENTS (argument check before SDK call)
-        // or throw due to uninitialized context
         if (!result.threw) {
             assertTrue("Should return error", result.isError)
             assertEquals("INVALID_ARGUMENTS", result.errorCode)
@@ -242,7 +218,6 @@ class VietmapTrackingPluginInstrumentedTest {
             "apiID" to ALERT_API_ID
         ))
 
-        // isInitialized defaults to false → SDK_NOT_INITIALIZED
         if (!result.threw) {
             assertTrue("Should return error", result.isError)
             assertEquals("SDK_NOT_INITIALIZED", result.errorCode)
@@ -251,7 +226,6 @@ class VietmapTrackingPluginInstrumentedTest {
 
     @Test
     fun testConfigureAlertAPIWithMissingApiKeyReturnsError() {
-        // Even if initialized, missing apiKey should error
         val plugin = VietmapTrackingPlugin()
         val result = invokeMethod(plugin, "configureAlertAPI", mapOf(
             "apiID" to ALERT_API_ID
@@ -259,7 +233,6 @@ class VietmapTrackingPluginInstrumentedTest {
 
         if (!result.threw) {
             assertTrue("Should return error", result.isError)
-            // Should be SDK_NOT_INITIALIZED (since not configured) or INVALID_ARGUMENTS
             assertTrue(
                 "Error should be SDK_NOT_INITIALIZED or INVALID_ARGUMENTS",
                 result.errorCode in listOf("SDK_NOT_INITIALIZED", "INVALID_ARGUMENTS")
@@ -421,7 +394,7 @@ class VietmapTrackingPluginInstrumentedTest {
     }
 
     // ============================================================
-    // 13. Guard consistency — all SDK methods require initialization
+    // 13. Guard consistency
     // ============================================================
 
     @Test
@@ -451,8 +424,7 @@ class VietmapTrackingPluginInstrumentedTest {
                     "SDK_NOT_INITIALIZED", result.errorCode
                 )
             }
-            // If threw UninitializedPropertyAccess, that's also acceptable
-            // (means it tried to access context/SDK before guard — a code issue to fix)
+          
         }
     }
 
@@ -522,12 +494,12 @@ class VietmapTrackingPluginInstrumentedTest {
 
     // ============================================================
     // 16. GPX waypoint data structure tests
-    //     (Pure data validation — no SDK needed)
+    //    
     // ============================================================
 
     @Test
     fun testLocationDictStructureMatchesDartModel() {
-        // Waypoint from GPX: Nhà thờ Đức Bà, District 1, HCMC
+        // Waypoint
         val locationDict = mapOf(
             "latitude" to 10.779784,
             "longitude" to 106.699074,
@@ -630,11 +602,11 @@ class VietmapTrackingPluginInstrumentedTest {
     @Test
     fun testHcmcGpxWaypointsInValidRange() {
         val waypoints = listOf(
-            Pair(10.776889, 106.700806),  // Bến Thành Market
-            Pair(10.779784, 106.699074),  // Nhà thờ Đức Bà
-            Pair(10.777042, 106.695179),  // Dinh Độc Lập
-            Pair(10.775658, 106.701493),  // Công viên 23/9
-            Pair(10.773699, 106.704079),  // Phố đi bộ Nguyễn Huệ
+            Pair(10.776889, 106.700806),  
+            Pair(10.779784, 106.699074),  
+            Pair(10.777042, 106.695179),  
+            Pair(10.775658, 106.701493),  
+            Pair(10.773699, 106.704079),  
         )
 
         for ((lat, lon) in waypoints) {
@@ -657,8 +629,6 @@ class VietmapTrackingPluginInstrumentedTest {
             "anotherUnknown" to 42
         ))
 
-        // Should not crash due to unknown fields
-        // May fail due to uninitialized context, but should not throw for unknown keys
         if (result.isError) {
             assertNotEquals(
                 "Unknown fields should be ignored, not cause an error",

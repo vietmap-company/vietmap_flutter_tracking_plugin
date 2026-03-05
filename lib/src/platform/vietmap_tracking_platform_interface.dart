@@ -34,7 +34,7 @@ abstract class VietmapTrackingPlatform extends PlatformInterface {
   Future<bool> isTrackingActive();
   Future<TrackingStatus> getTrackingStatus();
   Future<bool> updateTrackingConfig(LocationTrackingConfig config);
-
+  Future<Map<String, dynamic>> getTrackingHealthStatus();
 
   // Alert methods
   Future<bool> turnOnAlert();
