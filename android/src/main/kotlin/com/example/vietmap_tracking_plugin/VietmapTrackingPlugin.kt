@@ -111,13 +111,15 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
-        // Clean up SDK resources
+        // Clean up SDK callbacks (Flutter EventChannel sinks will be invalid after detach)
         if (isInitialized) {
             clearSDKCallbacks()
-            try {
-                vietmapSDK.stopTracking()
-            } catch (_: Exception) {
-            }
+            // NOTE: Do NOT call vietmapSDK.stopTracking() here!
+            // When backgroundMode is enabled, the SDK's Foreground Service
+            // (START_STICKY) must continue running independently even after
+            // the Flutter engine is destroyed (app killed / task swiped).
+            // The OS will re-create the service automatically.
+            // Tracking should only stop when explicitly called via stopTracking().
         }
     }
 
@@ -342,19 +344,20 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         // Store pending result
         pendingPermissionResult = result
 
-        // Request permissions 
-        val permissions = mutableListOf(
+        // Request basic location permissions only.
+        // On Android 11+ (API 30), ACCESS_BACKGROUND_LOCATION must NOT be
+        // requested together with foreground permissions — Android will
+        // silently ignore the entire request if combined. Background
+        // permission should be requested separately via
+        // requestAlwaysLocationPermissions() after foreground is granted.
+        val permissions = arrayOf(
             Manifest.permission.ACCESS_FINE_LOCATION,
             Manifest.permission.ACCESS_COARSE_LOCATION
         )
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            permissions.add(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-        }
-
         ActivityCompat.requestPermissions(
             currentActivity,
-            permissions.toTypedArray(),
+            permissions,
             PERMISSION_REQUEST_CODE
         )
     }

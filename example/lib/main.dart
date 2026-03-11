@@ -251,7 +251,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
       intervalMs: 5000,
       distanceFilter: 10,
       accuracy: LocationAccuracy.high,
-      backgroundMode: false, //false
+      backgroundMode: true, // Must be true for tracking to survive app kill
       notificationTitle: 'GPS Tracking',
       notificationMessage: 'Your location is being tracked',
     );
