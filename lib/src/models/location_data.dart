@@ -27,7 +27,7 @@ class LocationData {
       accuracy: (json['accuracy'] as num).toDouble(),
       speed: (json['speed'] as num).toDouble(),
       bearing: (json['bearing'] as num).toDouble(),
-      timestamp: json['timestamp'] as int,
+      timestamp: (json['timestamp'] as num).toInt(),
     );
   }
 

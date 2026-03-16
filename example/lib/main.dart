@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
 import 'dart:async';
 import 'dart:math' show sqrt, asin;
+import 'gpx_simulator.dart';
+import 'package:flutter/services.dart';
+
+const slcChannel = MethodChannel('vietmap_tracking_plugin/slc');
 
 void main() {
   runApp(const MyApp());
@@ -52,10 +56,22 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
   final _customDistanceController = TextEditingController(text: '10');
   bool _customBackgroundMode = false;
 
+  // City Run GPX simulation
+  GPXSimulator? _simulator;
+  bool _isCityRunLoaded = false;
+  bool _isCityRunRunning = false;
+
+  // SLC (Significant Location Changes) monitoring
+  bool _slcEnabled = false;
+  List<String> _slcLogs = [];
+  bool _isSLCAwakeFromKill = false;
+
   @override
   void initState() {
     super.initState();
     _initializeTracking();
+    _checkSLCWakeUp();
+    _listenSLCEvents();
   }
 
   @override
@@ -64,6 +80,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
     _statusSubscription?.cancel();
     _customIntervalController.dispose();
     _customDistanceController.dispose();
+    _simulator?.stop();
     super.dispose();
   }
 
@@ -684,6 +701,126 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
     }
   }
 
+  Future<void> _loadCityRun() async {
+    try {
+      final gpxContent = await rootBundle.loadString('assets/city_run_hcmc.gpx');
+      final waypoints = GPXSimulator.parseGPX(gpxContent);
+      
+      setState(() {
+        _simulator = GPXSimulator(
+          waypoints: waypoints,
+          onLocation: (location) {
+            setState(() {
+              _currentLocation = location;
+            });
+          },
+        );
+        _isCityRunLoaded = true;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('✅ City Run loaded (${waypoints.length} waypoints)'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error loading city run: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('❌ Error: $e'), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _startCityRun() {
+    if (_simulator == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⚠️ Load City Run first'), backgroundColor: Colors.orange),
+      );
+      return;
+    }
+    _simulator!.start(speed: 5.0);
+    setState(() => _isCityRunRunning = true);
+  }
+
+  void _stopCityRun() {
+    _simulator?.stop();
+    setState(() => _isCityRunRunning = false);
+  }
+
+  Future<void> _checkSLCWakeUp() async {
+    try {
+      final wasWakedByOS = await slcChannel.invokeMethod<bool>('wasWakedBySLC') ?? false;
+      setState(() {
+        _isSLCAwakeFromKill = wasWakedByOS;
+      });
+      if (wasWakedByOS) {
+        _addSLCLog('🟢 App was woken up by iOS due to Significant Location Change!');
+      }
+    } catch (e) {
+      print('Error checking SLC wake-up: $e');
+    }
+  }
+
+  void _listenSLCEvents() {
+    slcChannel.setMethodCallHandler((call) async {
+      if (call.method == 'onSLCEvent') {
+        final eventData = call.arguments as Map;
+        final message = eventData['message'] as String? ?? '';
+        _addSLCLog(message);
+      }
+      return null;
+    });
+  }
+
+  void _addSLCLog(String message) {
+    setState(() {
+      _slcLogs.insert(0, '[${DateTime.now().toIso8601String()}] $message');
+      if (_slcLogs.length > 50) {
+        _slcLogs = _slcLogs.sublist(0, 50);
+      }
+      _slcEnabled = true;
+    });
+  }
+
+  Future<void> _startSLC() async {
+    try {
+      _addSLCLog('📡 Starting SLC monitoring...');
+      await slcChannel.invokeMethod('startSLC', {
+        'apiKey': 'c8f1a7e94d2b6053fa18e0c9b7d46a5213e89bcf0a47d195',
+        'vehicleId': 'vehicle_001',
+        'userId': 'user_001',
+        'apiEndpoint': 'https://dev.fleetwork.vn/api/v1/gps-tracking',
+      });
+      setState(() => _slcEnabled = true);
+      _addSLCLog('✅ SLC monitoring started successfully');
+    } catch (e) {
+      _addSLCLog('❌ Failed to start SLC: $e');
+    }
+  }
+
+  Future<void> _stopSLC() async {
+    try {
+      _addSLCLog('⏹️ Stopping SLC monitoring...');
+      await slcChannel.invokeMethod('stopSLC');
+      setState(() => _slcEnabled = false);
+      _addSLCLog('✅ SLC monitoring stopped');
+    } catch (e) {
+      _addSLCLog('❌ Failed to stop SLC: $e');
+    }
+  }
+
+  Future<void> _refreshSLCLogs() async {
+    try {
+      final logs = await slcChannel.invokeMethod<List>('getSLCLogs') ?? [];
+      setState(() {
+        _slcLogs = logs.cast<String>().toList();
+      });
+    } catch (e) {
+      _addSLCLog('❌ Failed to refresh logs: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -1109,9 +1246,183 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
                 ),
               ),
             ],
+            // SLC (Significant Location Changes) Monitoring Card
+            const SizedBox(height: 16),
+            Card(
+              color: Colors.orange.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            '📡 SLC Monitoring',
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _slcEnabled ? Colors.orange : Colors.grey,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _slcEnabled ? '🔴 Enabled' : '⚪ Disabled',
+                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_isSLCAwakeFromKill) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.shade100,
+                          border: Border.all(color: Colors.green),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          '✅ App was awakened by iOS due to Significant Location Change (after force-kill)',
+                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _slcEnabled ? _stopSLC : _startSLC,
+                            icon: Icon(_slcEnabled ? Icons.pause : Icons.play_arrow),
+                            label: Text(_slcEnabled ? 'Stop SLC' : 'Start SLC'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: _slcEnabled ? Colors.red : Colors.orange,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _refreshSLCLogs,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Refresh Logs'),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_slcLogs.isNotEmpty) ...[
+                      const SizedBox(height: 12),
+                      ExpansionTile(
+                        title: Text('SLC Logs (${_slcLogs.length})'),
+                        children: [
+                          Container(
+                            height: 200,
+                            color: Colors.grey.shade100,
+                            child: SingleChildScrollView(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: _slcLogs
+                                    .map((log) => Padding(
+                                          padding: const EdgeInsets.all(8.0),
+                                          child: Text(
+                                            log,
+                                            style: const TextStyle(fontSize: 11, fontFamily: 'Courier'),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ))
+                                    .toList(),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            // City Run Test Card
+            const SizedBox(height: 16),
+            Card(
+              color: Colors.purple.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            '🏃 City Run Test (iOS Simulator)',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _isCityRunRunning ? Colors.green : Colors.grey,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            _isCityRunRunning ? '▶️ Running' : '⏸️ Stopped',
+                            style: const TextStyle(color: Colors.white, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (_simulator != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _simulator!.getStats(),
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    ElevatedButton.icon(
+                      onPressed: _isCityRunLoaded ? null : _loadCityRun,
+                      icon: const Icon(Icons.download),
+                      label: Text(_isCityRunLoaded ? '✅ Loaded' : '📥 Load GPX'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _isCityRunLoaded ? Colors.green : Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isCityRunLoaded && !_isCityRunRunning ? _startCityRun : null,
+                            icon: const Icon(Icons.play_arrow),
+                            label: const Text('Start'),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: _isCityRunRunning ? _stopCityRun : null,
+                            icon: const Icon(Icons.stop),
+                            label: const Text('Stop'),
+                            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 }
+
