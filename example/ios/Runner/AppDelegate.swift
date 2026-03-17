@@ -45,7 +45,7 @@ import CoreLocation
             deviceId: args?["deviceId"] as? String ?? UIDevice.current.uniqueDeviceID,
             vehicleId: args?["vehicleId"] as? String,
             userId: args?["userId"] as? String,
-            apiEndpoint: args?["apiEndpoint"] as? String ?? "https://dev.fleetwork.vn/api/v1/gps-tracking"
+            apiEndpoint: args?["apiEndpoint"] as? String ?? "https://tracking.fleetwork.vn/api/v1/gps-tracking"
           )
           self.slcManager.startSLC(config: config)
           result(true)

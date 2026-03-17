@@ -790,7 +790,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
         'apiKey': 'c8f1a7e94d2b6053fa18e0c9b7d46a5213e89bcf0a47d195',
         'vehicleId': 'vehicle_001',
         'userId': 'user_001',
-        'apiEndpoint': 'https://dev.fleetwork.vn/api/v1/gps-tracking',
+        'apiEndpoint': 'https://tracking.fleetwork.vn/api/v1/gps-tracking',
       });
       setState(() => _slcEnabled = true);
       _addSLCLog('✅ SLC monitoring started successfully');
