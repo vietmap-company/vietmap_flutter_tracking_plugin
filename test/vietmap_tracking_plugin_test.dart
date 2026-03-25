@@ -73,7 +73,7 @@ void main() {
         altitude: 10.0,
         accuracy: 5.0,
         speed: 2.5,
-        bearing: 90.0,
+        heading: 90.0,
         timestamp: 1234567890,
       );
 
@@ -106,7 +106,7 @@ void main() {
       expect(locationData.altitude, 10.0);
       expect(locationData.accuracy, 5.0);
       expect(locationData.speed, 2.5);
-      expect(locationData.bearing, 90.0);
+      expect(locationData.heading, 90.0);
       expect(locationData.timestamp, 1234567890);
     });
 
@@ -117,7 +117,7 @@ void main() {
         altitude: 10.0,
         accuracy: 5.0,
         speed: 2.5,
-        bearing: 90.0,
+        heading: 90.0,
         timestamp: 1234567890000,
       );
 
@@ -196,7 +196,7 @@ void main() {
         altitude: 0,
         accuracy: 0,
         speed: 0,
-        bearing: 0,
+        heading: 0,
         timestamp: 0,
       );
 
@@ -206,7 +206,7 @@ void main() {
         altitude: 0,
         accuracy: 0,
         speed: 0,
-        bearing: 0,
+        heading: 0,
         timestamp: 0,
       );
 
@@ -234,7 +234,7 @@ void main() {
         altitude: 0,
         accuracy: 0,
         speed: 0,
-        bearing: 0,
+        heading: 0,
         timestamp: 0,
       );
 

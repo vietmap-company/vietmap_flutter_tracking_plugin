@@ -9,6 +9,11 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     private var isInitialized: Bool = false
     private var apiKey: String?
     private var baseURL: String?
+    
+    // Device metadata (from startTracking config)
+    private var deviceId: String?
+    private var userId: String?
+    private var vehicleId: String?
 
     // MARK: - VietmapTrackingSDK Integration
     private let trackingManager = VietmapTrackingManager.shared
@@ -46,7 +51,49 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         trackingManager.onLocationUpdate = { [weak self] locationDict in
             guard let self = self else { return }
             if let dict = locationDict as? [String: Any] {
+                // Extract fields from native SDK callback
+                let lat = dict["lat"] as? Double ?? 0
+                let lng = dict["lng"] as? Double ?? 0
+                let timestamp = dict["timestamp"] as? Double ?? 0
+                let speed = dict["speed"] as? Double ?? 0
+                let heading = dict["heading"] as? Double ?? 0
+                let altitude = dict["altitude"] as? Double ?? 0
+                let accuracy = dict["accuracy"] as? Double ?? 0
+                
+                
+                // Build correct request body matching API spec
+                var requestBody: [String: Any] = [
+                    "lat": lat,              
+                    "lng": lng,             
+                    "timestamp": Int64(timestamp),
+                    "speed": speed,
+                    "heading": heading,           
+                    "altitude": altitude,
+                    "accuracy": accuracy,
+                    "status": "active"
+                ]
+                
+                // Add device metadata if available
+                if let deviceId = self.deviceId {
+                    requestBody["deviceId"] = deviceId
+                }
+                if let userId = self.userId {
+                    requestBody["userId"] = userId
+                }
+                if let vehicleId = self.vehicleId {
+                    requestBody["vehicleId"] = vehicleId
+                }
+                
+                if let jsonData = try? JSONSerialization.data(withJSONObject: requestBody),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    print(jsonString)
+                }
+                
+                // Send to Flutter EventChannel (for monitoring)
                 self.locationStreamHandler.send(event: dict)
+                
+                // Also attempt to POST to server directly with correct format
+                self.postLocationToServer(requestBody: requestBody)
             }
         }
 
@@ -59,10 +106,12 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         trackingManager.onError = { [weak self] errorMessage in
             guard let self = self else { return }
+            print("❌ iOS SDK Error: \(errorMessage)")
             self.locationStreamHandler.send(event: [
                 "error": errorMessage,
                 "timestamp": Int(Date().timeIntervalSince1970 * 1000)
             ])
+
         }
 
         trackingManager.onPermissionChanged = { [weak self] status in
@@ -80,9 +129,49 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
                 "timestamp": Int(Date().timeIntervalSince1970 * 1000)
             ]
             if let routeDict = routeData as? [String: Any] {
-                event["routeData"] = routeDict
+                event["route"] = routeDict
             }
             self.trackingStatusStreamHandler.send(event: event)
+        }
+    }
+
+    /// POST location data to server with correct field names
+    /// This ensures API receives the exact format it expects, regardless of what iOS SDK POSTs internally
+    private func postLocationToServer(requestBody: [String: Any]) {
+        guard let baseURL = baseURL, !baseURL.isEmpty else {
+            return
+        }
+
+        // Ensure apiKey is available
+        guard let apiKey = apiKey, !apiKey.isEmpty else {
+            return
+        }
+
+        // Build URL with apiKey as query parameter
+        var urlComponents = URLComponents(string: baseURL)
+        urlComponents?.queryItems = [URLQueryItem(name: "apiKey", value: apiKey)]
+
+        guard let url = urlComponents?.url else {
+            return
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        do {
+            request.httpBody = try JSONSerialization.data(withJSONObject: requestBody)
+
+
+
+            let task = URLSession.shared.dataTask(with: request) { data, response, error in
+                if let error = error {
+                    return
+                }
+            }
+            task.resume()
+        } catch {
+            print("❌ Failed to serialize request body: \(error)")
         }
     }
 
@@ -145,6 +234,9 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         self.apiKey = apiKey
         self.baseURL = args["baseURL"] as? String
+        
+
+        
         trackingManager.configure(apiKey: apiKey)
 
         if let baseURL = baseURL, !baseURL.isEmpty {
@@ -280,12 +372,21 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let backgroundMode = args?["backgroundMode"] as? Bool ?? true
         let intervalMs = args?["intervalMs"] as? Int ?? 5000
         let distanceFilter = args?["distanceFilter"] as? Double ?? 10.0
+        
+        let deviceId = args?["deviceId"] as? String
+        let userId = args?["userId"] as? String
+        let vehicleId = args?["vehicleId"] as? String
+        
+        self.deviceId = deviceId
+        self.userId = userId
+        self.vehicleId = vehicleId
+
 
         trackingManager.startTracking(
             enhancedBackgroundMode: backgroundMode,
             intervalMs: intervalMs,
             distanceFilter: distanceFilter
-        ) { success, message in
+        ) { [weak self] success, message in
             DispatchQueue.main.async {
                 if success {
                     result(true)
