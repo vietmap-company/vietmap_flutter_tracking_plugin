@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
 import 'dart:async';
 import 'dart:math' show sqrt, asin;
+import 'dart:io';
 import 'gpx_simulator.dart';
 import 'package:flutter/services.dart';
+import 'package:device_info_plus/device_info_plus.dart';
 
 const slcChannel = MethodChannel('vietmap_tracking_plugin/slc');
 
@@ -65,6 +67,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
   bool _slcEnabled = false;
   List<String> _slcLogs = [];
   bool _isSLCAwakeFromKill = false;
+  String _deviceId = '047000f7a187494e';
 
   @override
   void initState() {
@@ -86,10 +89,21 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
 
   Future<void> _initializeTracking() async {
     try {
+      // Get real Device ID
+      final deviceInfo = DeviceInfoPlugin();
+      if (Platform.isIOS) {
+        final iosInfo = await deviceInfo.iosInfo;
+        _deviceId = iosInfo.identifierForVendor ?? _deviceId;
+      } else if (Platform.isAndroid) {
+        final androidInfo = await deviceInfo.androidInfo;
+        _deviceId = androidInfo.id;
+      }
+
       // Configure VietmapTrackingSDK with API key
-      print('🔧 Configuring VietmapTrackingSDK...');
+      print('🔧 Configuring VietmapTrackingSDK with deviceId: $_deviceId');
       await _controller.configure(
-        '0cd03613175a67f87567f86f0ba2f3b818e3a2b5f2c2634b',
+        'c8f1a7e94d2b6053fa18e0c9b7d46a5213e89bcf0a47d195',
+        baseURL: 'https://tracking.fleetwork.vn/api/v1',
       );
       print('✅ VietmapTrackingSDK configured successfully');
 
@@ -145,10 +159,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
 
   void _setupListeners() {
     _locationSubscription = _controller.onLocationUpdate.listen((location) {
-      print(
-        '📍 Timer: ${DateTime.fromMillisecondsSinceEpoch(location.timestamp).toLocal()}',
-      );
-      print('📍 New location: $location');
+
 
       setState(() {
         // Calculate distance if we have previous location
@@ -179,7 +190,14 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
     });
 
     _statusSubscription = _controller.onTrackingStatusChanged.listen((status) {
-      print('📊 Status update: $status');
+      print('════════════════════════════════════════');
+      print('🔄 TRACKING STATUS UPDATE');
+      print('════════════════════════════════════════');
+      print('📊 Status: $status');
+      print('   - Is Tracking: ${status.isTracking}');
+      print('   - Duration: ${status.trackingDuration}ms');
+      print('   - Last Update: ${status.lastUpdateTime?.toLocal() ?? "N/A"}');
+      print('════════════════════════════════════════');
       setState(() {
         _trackingStatus = status;
         _isTracking = status.isTracking;
@@ -218,6 +236,12 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
     try {
       final result = await _controller.requestLocationPermissions();
       print('🔓 Permission result: $result');
+      print('  - Granted: ${result.granted}');
+      print('  - Status: ${result.status}');
+      print('  - Fine Location: ${result.fineLocation}');
+      print('  - Coarse Location: ${result.coarseLocation}');
+      print('  - Background Location: ${result.backgroundLocation}');
+      
       if (result.granted) {
         setState(() {
           _hasPermissions = true;
@@ -231,10 +255,13 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
           );
         }
       } else {
+        setState(() {
+          _hasPermissions = false;
+        });
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('❌ Location permissions denied'),
+            SnackBar(
+              content: Text('❌ Location permissions denied (Status: ${result.status})'),
               backgroundColor: Colors.red,
             ),
           );
@@ -242,10 +269,13 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
       }
     } catch (e) {
       print('Error requesting permissions: $e');
+      setState(() {
+        _hasPermissions = false;
+      });
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('❌ Failed to request permissions'),
+          SnackBar(
+            content: Text('❌ Error: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -262,6 +292,9 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
         backgroundMode: _customBackgroundMode,
         notificationTitle: 'GPS Tracking',
         notificationMessage: 'Your location is being tracked',
+        deviceId: _deviceId, // Handled by SDK configuration
+        userId: 'user_002',
+        vehicleId: 'vehicle_002',
       );
     }
     return LocationTrackingConfig(
@@ -271,6 +304,9 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
       backgroundMode: true, // Must be true for tracking to survive app kill
       notificationTitle: 'GPS Tracking',
       notificationMessage: 'Your location is being tracked',
+      deviceId: _deviceId, // Handled by SDK configuration
+      userId: 'user_001',
+      vehicleId: 'vehicle_001',
     );
   }
 
@@ -287,10 +323,8 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
 
     try {
       final activeConfig = _getActiveConfig();
-      print('🚀 Starting enhanced tracking with config: $activeConfig');
 
       final result = await _controller.startTracking(activeConfig);
-      print('✅ Enhanced tracking result: $result');
 
       if (result) {
         // Update tracking state immediately after successful start
@@ -301,6 +335,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
           _averageSpeed = 0.0;
         });
 
+
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -310,7 +345,6 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
           );
         }
       } else {
-        print('⚠️ Tracking may not have started successfully');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -326,7 +360,6 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
         });
       }
     } catch (e) {
-      print('Error starting enhanced tracking: $e');
       setState(() {
         _isTracking = false;
       });
@@ -525,6 +558,19 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
 
   Future<void> _getCurrentLocation() async {
     try {
+      // Check if permissions are granted first
+      if (!_hasPermissions) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('⚠️ Location permissions not granted. Please request permissions first.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
       final location = await _controller.getCurrentLocation();
       setState(() {
         _currentLocation = location;
@@ -532,8 +578,10 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('📍 Location fetched'),
+          SnackBar(
+            content: Text(
+              '📍 Location: ${location.latitude.toStringAsFixed(6)}, ${location.longitude.toStringAsFixed(6)}',
+            ),
             backgroundColor: Colors.blue,
           ),
         );
@@ -543,7 +591,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('❌ Failed to get current location'),
+            content: Text('❌ Failed to get location: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -580,7 +628,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
             Text('Altitude: ${loc.altitude.toStringAsFixed(2)}m'),
             Text('Accuracy: ${loc.accuracy.toStringAsFixed(2)}m'),
             Text('Speed: ${speedKmh.toStringAsFixed(2)} km/h'),
-            Text('Bearing: ${loc.bearing.toStringAsFixed(2)}°'),
+            Text('Bearing: ${loc.heading.toStringAsFixed(2)}°'),
             Text('Time: ${loc.dateTime}'),
           ],
         ),
@@ -784,13 +832,19 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
   }
 
   Future<void> _startSLC() async {
+    if (!Platform.isIOS) {
+      _addSLCLog('⚠️ SLC is only supported on iOS');
+      return;
+    }
     try {
-      _addSLCLog('📡 Starting SLC monitoring...');
+      _addSLCLog('📡 Starting SLC monitoring with deviceId: $_deviceId...');
       await slcChannel.invokeMethod('startSLC', {
         'apiKey': 'c8f1a7e94d2b6053fa18e0c9b7d46a5213e89bcf0a47d195',
+        'deviceId': _deviceId,
         'vehicleId': 'vehicle_001',
         'userId': 'user_001',
-        'apiEndpoint': 'https://tracking.fleetwork.vn/api/v1/gps-tracking',
+        'apiEndpoint': 'https://tracking.fleetwork.vn/api/v1/gps-tracking/history',
+        'distanceFilter': 500.0,
       });
       setState(() => _slcEnabled = true);
       _addSLCLog('✅ SLC monitoring started successfully');
@@ -1246,107 +1300,109 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
                 ),
               ),
             ],
-            // SLC (Significant Location Changes) Monitoring Card
-            const SizedBox(height: 16),
-            Card(
-              color: Colors.orange.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Text(
-                            '📡 SLC Monitoring',
-                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: _slcEnabled ? Colors.orange : Colors.grey,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            _slcEnabled ? '🔴 Enabled' : '⚪ Disabled',
-                            style: const TextStyle(color: Colors.white, fontSize: 12),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_isSLCAwakeFromKill) ...[
-                      const SizedBox(height: 12),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.green.shade100,
-                          border: Border.all(color: Colors.green),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: const Text(
-                          '✅ App was awakened by iOS due to Significant Location Change (after force-kill)',
-                          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ),
-                    ],
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _slcEnabled ? _stopSLC : _startSLC,
-                            icon: Icon(_slcEnabled ? Icons.pause : Icons.play_arrow),
-                            label: Text(_slcEnabled ? 'Stop SLC' : 'Start SLC'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: _slcEnabled ? Colors.red : Colors.orange,
+            // SLC (Significant Location Changes) Monitoring Card - iOS Only
+            if (Platform.isIOS) ...[
+              const SizedBox(height: 16),
+              Card(
+                color: Colors.orange.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Expanded(
+                            child: Text(
+                              '📡 SLC Monitoring',
+                              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: ElevatedButton.icon(
-                            onPressed: _refreshSLCLogs,
-                            icon: const Icon(Icons.refresh),
-                            label: const Text('Refresh Logs'),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (_slcLogs.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      ExpansionTile(
-                        title: Text('SLC Logs (${_slcLogs.length})'),
-                        children: [
+                          const SizedBox(width: 8),
                           Container(
-                            height: 200,
-                            color: Colors.grey.shade100,
-                            child: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: _slcLogs
-                                    .map((log) => Padding(
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Text(
-                                            log,
-                                            style: const TextStyle(fontSize: 11, fontFamily: 'Courier'),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ))
-                                    .toList(),
-                              ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: _slcEnabled ? Colors.orange : Colors.grey,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              _slcEnabled ? '🔴 Enabled' : '⚪ Disabled',
+                              style: const TextStyle(color: Colors.white, fontSize: 12),
                             ),
                           ),
                         ],
                       ),
+                      if (_isSLCAwakeFromKill) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade100,
+                            border: Border.all(color: Colors.green),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: const Text(
+                            '✅ App was awakened by iOS due to Significant Location Change (after force-kill)',
+                            style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold, fontSize: 12),
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _slcEnabled ? _stopSLC : _startSLC,
+                              icon: Icon(_slcEnabled ? Icons.pause : Icons.play_arrow),
+                              label: Text(_slcEnabled ? 'Stop SLC' : 'Start SLC'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: _slcEnabled ? Colors.red : Colors.orange,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: _refreshSLCLogs,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Refresh Logs'),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (_slcLogs.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        ExpansionTile(
+                          title: Text('SLC Logs (${_slcLogs.length})'),
+                          children: [
+                            Container(
+                              height: 200,
+                              color: Colors.grey.shade100,
+                              child: SingleChildScrollView(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: _slcLogs
+                                      .map((log) => Padding(
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Text(
+                                              log,
+                                              style: const TextStyle(fontSize: 11, fontFamily: 'Courier'),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ))
+                                      .toList(),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ],
-                  ],
+                  ),
                 ),
               ),
-            ),
+            ],
             // City Run Test Card
             const SizedBox(height: 16),
             Card(

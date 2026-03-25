@@ -482,7 +482,7 @@ void main() {
       expect(result.altitude, 12.0);
       expect(result.accuracy, 5.0);
       expect(result.speed, 2.78);
-      expect(result.bearing, 180.0);
+      expect(result.heading, 180.0);
       expect(result.timestamp, 1700000000000);
     });
 
@@ -771,7 +771,7 @@ void main() {
         altitude: 12.0,
         accuracy: 5.0,
         speed: 2.78,
-        bearing: 180.0,
+        heading: 180.0,
         timestamp: 1700000000000,
       );
 
@@ -781,7 +781,7 @@ void main() {
         altitude: 11.0,
         accuracy: 4.0,
         speed: 2.78,
-        bearing: 240.0,
+        heading: 240.0,
         timestamp: 1700000075000,
       );
 
@@ -814,7 +814,7 @@ void main() {
         altitude: 9.0,
         accuracy: 3.0,
         speed: 2.78,
-        bearing: 135.0,
+        heading: 135.0,
         timestamp: 1700000170000,
       );
 

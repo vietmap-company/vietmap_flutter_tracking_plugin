@@ -18,6 +18,18 @@ class LocationTrackingConfig {
   /// Custom notification message for foreground service (Android)
   final String? notificationMessage;
 
+  /// Device ID for tracking identification
+  final String? deviceId;
+
+  /// User ID for tracking identification
+  final String? userId;
+
+  /// Vehicle ID for tracking identification
+  final String? vehicleId;
+
+  /// API endpoint for sending tracking data
+  final String? apiEndpoint;
+
   const LocationTrackingConfig({
     required this.intervalMs,
     required this.distanceFilter,
@@ -25,6 +37,10 @@ class LocationTrackingConfig {
     required this.backgroundMode,
     this.notificationTitle,
     this.notificationMessage,
+    this.deviceId,
+    this.userId,
+    this.vehicleId,
+    this.apiEndpoint,
   });
 
   /// Convert to JSON for platform channel
@@ -35,6 +51,10 @@ class LocationTrackingConfig {
     'backgroundMode': backgroundMode,
     'notificationTitle': notificationTitle,
     'notificationMessage': notificationMessage,
+    'deviceId': deviceId,
+    'userId': userId,
+    'vehicleId': vehicleId,
+    'apiEndpoint': apiEndpoint,
   };
 
   /// Create from JSON
@@ -46,6 +66,10 @@ class LocationTrackingConfig {
       backgroundMode: json['backgroundMode'] as bool,
       notificationTitle: json['notificationTitle'] as String?,
       notificationMessage: json['notificationMessage'] as String?,
+      deviceId: json['deviceId'] as String?,
+      userId: json['userId'] as String?,
+      vehicleId: json['vehicleId'] as String?,
+      apiEndpoint: json['apiEndpoint'] as String?,
     );
   }
 
@@ -57,6 +81,10 @@ class LocationTrackingConfig {
     bool? backgroundMode,
     String? notificationTitle,
     String? notificationMessage,
+    String? deviceId,
+    String? userId,
+    String? vehicleId,
+    String? apiEndpoint,
   }) {
     return LocationTrackingConfig(
       intervalMs: intervalMs ?? this.intervalMs,
@@ -65,6 +93,10 @@ class LocationTrackingConfig {
       backgroundMode: backgroundMode ?? this.backgroundMode,
       notificationTitle: notificationTitle ?? this.notificationTitle,
       notificationMessage: notificationMessage ?? this.notificationMessage,
+      deviceId: deviceId ?? this.deviceId,
+      userId: userId ?? this.userId,
+      vehicleId: vehicleId ?? this.vehicleId,
+      apiEndpoint: apiEndpoint ?? this.apiEndpoint,
     );
   }
 }

@@ -121,6 +121,8 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
       return LocationData.fromJson(Map<String, dynamic>.from(result));
     } on PlatformException catch (e) {
       throw Exception('Failed to get current location: ${e.message}');
+    } catch (e) {
+      throw Exception('Error parsing location data: $e');
     }
   }
 
@@ -200,16 +202,25 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   @override
   Stream<LocationData> get onLocationUpdate {
     return _locationUpdateChannel.receiveBroadcastStream().map((event) {
-      final data = Map<String, dynamic>.from(event as Map);
-      return LocationData.fromJson(data);
+      try {
+        final data = Map<String, dynamic>.from(event as Map);
+        return LocationData.fromJson(data);
+      } catch (e) {
+        rethrow;
+      }
     });
   }
 
   @override
   Stream<TrackingStatus> get onTrackingStatusChanged {
     return _trackingStatusChannel.receiveBroadcastStream().map((event) {
-      final data = Map<String, dynamic>.from(event as Map);
-      return TrackingStatus.fromJson(data);
+      try {
+        final data = Map<String, dynamic>.from(event as Map);
+        final status = TrackingStatus.fromJson(data);
+        return status;
+      } catch (e) {
+        rethrow;
+      }
     });
   }
 }

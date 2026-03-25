@@ -88,7 +88,7 @@ class GPXSimulator {
       altitude: wp.alt ?? 0.0,
       accuracy: 5.0,
       speed: 2.78, // ~10 km/h
-      bearing: 0.0,
+      heading: 0.0,
       timestamp: wp.time.millisecondsSinceEpoch,
     ));
 

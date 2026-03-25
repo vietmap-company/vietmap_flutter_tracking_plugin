@@ -5,7 +5,7 @@ class LocationData {
   final double altitude;
   final double accuracy;
   final double speed;
-  final double bearing;
+  final double heading;
   final int timestamp;
 
   const LocationData({
@@ -14,20 +14,20 @@ class LocationData {
     required this.altitude,
     required this.accuracy,
     required this.speed,
-    required this.bearing,
+    required this.heading,
     required this.timestamp,
   });
 
   /// Create from JSON received from platform channel
   factory LocationData.fromJson(Map<String, dynamic> json) {
     return LocationData(
-      latitude: (json['latitude'] as num).toDouble(),
-      longitude: (json['longitude'] as num).toDouble(),
-      altitude: (json['altitude'] as num).toDouble(),
-      accuracy: (json['accuracy'] as num).toDouble(),
-      speed: (json['speed'] as num).toDouble(),
-      bearing: (json['bearing'] as num).toDouble(),
-      timestamp: (json['timestamp'] as num).toInt(),
+      latitude: (json['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (json['longitude'] as num?)?.toDouble() ?? 0.0,
+      altitude: (json['altitude'] as num?)?.toDouble() ?? 0.0,
+      accuracy: (json['accuracy'] as num?)?.toDouble() ?? 0.0,
+      speed: (json['speed'] as num?)?.toDouble() ?? 0.0,
+      heading: (json['heading'] as num?)?.toDouble() ?? 0.0,
+      timestamp: (json['timestamp'] as num?)?.toInt() ?? DateTime.now().millisecondsSinceEpoch,
     );
   }
 
@@ -38,7 +38,7 @@ class LocationData {
     'altitude': altitude,
     'accuracy': accuracy,
     'speed': speed,
-    'bearing': bearing,
+    'heading': heading,
     'timestamp': timestamp,
   };
 

@@ -18,6 +18,7 @@ import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.plugin.common.PluginRegistry
+import android.util.Log
 import com.vietmap.trackingsdk.VietmapTrackingSDK
 import com.vietmap.trackingsdk.TrackingConfig
 import com.vietmap.trackingsdk.VMLocation
@@ -55,6 +56,13 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     // VietmapTrackingSDK Integration
     private lateinit var vietmapSDK: VietmapTrackingSDK
     private var isInitialized: Boolean = false
+    
+    // Store configuration for manual POST if needed
+    private var apiKey: String? = null
+    private var baseURL: String? = null
+    private var deviceId: String? = null
+    private var userId: String? = null
+    private var vehicleId: String? = null
 
     // Tracking state for duration/last update (matching iOS SDK behavior)
     private var trackingStartTime: Long = 0L
@@ -231,6 +239,11 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 result.error("INVALID_ARGUMENTS", "API key is required", null)
                 return
             }
+
+            // Store configuration
+            this.apiKey = apiKey
+            this.baseURL = baseURL
+
 
             // Initialize VietmapTrackingSDK with API key 
             if (!baseURL.isNullOrEmpty()) {
@@ -591,12 +604,47 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             val backgroundMode = args?.get("backgroundMode") as? Boolean ?: true
             val notificationTitle = args?.get("notificationTitle") as? String
             val notificationMessage = args?.get("notificationMessage") as? String
+            
+            // NEW: Extract tracking identifiers
+            val deviceId = args?.get("deviceId") as? String
+            val userId = args?.get("userId") as? String
+            val vehicleId = args?.get("vehicleId") as? String
+            val apiEndpoint = args?.get("apiEndpoint") as? String
+            
+            // Store in instance properties for use in location callbacks
+            this.deviceId = deviceId
+            this.userId = userId
+            this.vehicleId = vehicleId
+
+            Log.d("VietmapTrackingPlugin", "════════════════════════════════════")
+            Log.d("VietmapTrackingPlugin", "🔧 START TRACKING REQUEST")
+            Log.d("VietmapTrackingPlugin", "════════════════════════════════════")
+            Log.d("VietmapTrackingPlugin", "📋 Identifiers:")
+            Log.d("VietmapTrackingPlugin", "   - Device ID: $deviceId")
+            Log.d("VietmapTrackingPlugin", "   - User ID: $userId")
+            Log.d("VietmapTrackingPlugin", "   - Vehicle ID: $vehicleId")
+            Log.d("VietmapTrackingPlugin", "⚙️  Configuration:")
+            Log.d("VietmapTrackingPlugin", "   - API Endpoint: $apiEndpoint")
+            Log.d("VietmapTrackingPlugin", "   - Interval: ${intervalMs}ms")
+            Log.d("VietmapTrackingPlugin", "   - Distance Filter: ${distanceFilter}m")
+            Log.d("VietmapTrackingPlugin", "   - Background Mode: $backgroundMode")
+            Log.d("VietmapTrackingPlugin", "🔔 Notification:")
+            Log.d("VietmapTrackingPlugin", "   - Title: $notificationTitle")
+            Log.d("VietmapTrackingPlugin", "   - Message: $notificationMessage")
+
+            // Set dynamic metadata if provided 
+            if (!vehicleId.isNullOrEmpty()) {
+                Log.d("VietmapTrackingPlugin", "📍 Setting vehicleId: $vehicleId")
+                vietmapSDK.setVehicleId(vehicleId)
+            }
 
             // Set notification parameters if provided 
             if (!notificationTitle.isNullOrEmpty()) {
+                Log.d("VietmapTrackingPlugin", "🔔 Setting notification title: $notificationTitle")
                 vietmapSDK.setNotificationTitle(notificationTitle)
             }
             if (!notificationMessage.isNullOrEmpty()) {
+                Log.d("VietmapTrackingPlugin", "🔔 Setting notification text: $notificationMessage")
                 vietmapSDK.setNotificationText(notificationMessage)
             }
 
@@ -606,14 +654,23 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 minDistanceFilter = distanceFilter
                 enableBackgroundMode = backgroundMode
             }
+            Log.d("VietmapTrackingPlugin", "⚙️ Applying TrackingConfig: interval=$intervalMs, distance=$distanceFilter")
             vietmapSDK.setTrackingConfig(trackingConfig)
 
             // Start tracking
+            Log.d("VietmapTrackingPlugin", "🚀 Starting tracking with SDK v1.3.1+")
+            Log.d("VietmapTrackingPlugin", "   📍 Endpoint: https://tracking.fleetwork.vn/api/v1/gps-tracking")
+            Log.d("VietmapTrackingPlugin", "   🔑 API Key: ${apiKey?.take(10)}... (masked)")
+            Log.d("VietmapTrackingPlugin", "   📋 Device/User/Vehicle IDs configured: $deviceId / $userId / $vehicleId")
+            
             vietmapSDK.startTracking()
             trackingStartTime = System.currentTimeMillis()
+            Log.d("VietmapTrackingPlugin", "✅ startTracking() returned successfully")
+            
             result.success(true)
 
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Log.e("VietmapTrackingPlugin", "❌ Error starting tracking: ${e.message}", e)
             result.success(false)
         }
     }

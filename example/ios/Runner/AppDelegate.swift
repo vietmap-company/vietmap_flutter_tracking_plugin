@@ -45,7 +45,8 @@ import CoreLocation
             deviceId: args?["deviceId"] as? String ?? UIDevice.current.uniqueDeviceID,
             vehicleId: args?["vehicleId"] as? String,
             userId: args?["userId"] as? String,
-            apiEndpoint: args?["apiEndpoint"] as? String ?? "https://tracking.fleetwork.vn/api/v1/gps-tracking"
+            apiEndpoint: args?["apiEndpoint"] as? String ?? "https://dev.fleetwork.vn/api/v1/gps-tracking",
+            distanceFilter: (args?["distanceFilter"] as? NSNumber)?.doubleValue ?? 500.0  // Default 500m
           )
           self.slcManager.startSLC(config: config)
           result(true)
@@ -74,6 +75,7 @@ struct SLCConfig: Codable {
   let vehicleId: String?
   let userId: String?
   let apiEndpoint: String
+  let distanceFilter: CLLocationDistance  // Minimum distance to trigger location update (meters)
 
   private static let key = "vietmap_slc_config"
 
@@ -114,6 +116,16 @@ class SLCBackgroundLocationManager: NSObject, CLLocationManagerDelegate, URLSess
   /// In-memory ring-buffer of recent SLC log lines (max 200).
   private var logBuffer: [String] = []
   private let logBufferMax = 200
+  
+  /// Location deduplication: track last sent location to avoid sending same location multiple times
+  private var lastSentLocation: CLLocation?
+  private var lastSentTimestamp: TimeInterval = 0
+  
+  /// Minimum distance between sent locations (meters) - prevents noise
+  private let locationDeduplicationThreshold: CLLocationDistance = 50.0
+  
+  /// Minimum accuracy threshold (meters) - filter poor GPS fixes
+  private let minAccuracyThreshold: CLLocationDistance = 1000.0
 
   /// Background URLSession identifier — must be unique per app.
   private let backgroundSessionId = "com.vietmap.slc.background.upload"
@@ -136,32 +148,49 @@ class SLCBackgroundLocationManager: NSObject, CLLocationManagerDelegate, URLSess
 
   /// Called from Dart (Phase 1): persist config & start SLC monitoring.
   func startSLC(config: SLCConfig) {
+    // Stop any existing monitoring first to prevent duplicate location managers
+    locationManager?.stopMonitoringSignificantLocationChanges()
+    
     self.config = config
     config.save()
+    
+    // Verify config was saved successfully
+    if let savedConfig = SLCConfig.load() {
+      appendLog("🔒 Config verified saved: deviceId=\(savedConfig.deviceId), distanceFilter=\(savedConfig.distanceFilter)m, apiKey=\(savedConfig.apiKey.prefix(10))...")
+    } else {
+      appendLog("⚠️ WARNING: Config may not have been saved correctly")
+    }
 
     let lm = CLLocationManager()
     lm.delegate = self
     lm.allowsBackgroundLocationUpdates = true
     lm.pausesLocationUpdatesAutomatically = false
+    // Changed from kCLLocationAccuracyBest to HundredMeters for better battery life
+    // SLC doesn't need ultra-high accuracy; ±100m is sufficient for 500m+ distance filter
+    lm.desiredAccuracy = kCLLocationAccuracyHundredMeters
+    lm.distanceFilter = config.distanceFilter  // Only trigger location update if moved >= distanceFilter meters
+    
+    appendLog("📏 Distance filter set to: \(config.distanceFilter)m")
 
     // SLC only needs "Always" authorization
     if CLLocationManager.authorizationStatus() == .authorizedAlways {
       lm.startMonitoringSignificantLocationChanges()
-      appendLog("✅ SLC monitoring started (Always auth)")
+      appendLog("✅ SLC monitoring started (Always auth) with \(config.distanceFilter)m filter")
     } else if CLLocationManager.authorizationStatus() == .authorizedWhenInUse {
       // Request upgrade to Always
       lm.requestAlwaysAuthorization()
       // Start anyway — it will work in foreground/background but NOT after kill
       // until the user grants "Always".
       lm.startMonitoringSignificantLocationChanges()
-      appendLog("⚠️ SLC started but needs Always authorization for post-kill wake-up")
+      appendLog("⚠️ SLC started but needs Always authorization for post-kill wake-up. Distance filter: \(config.distanceFilter)m")
     } else {
       lm.requestAlwaysAuthorization()
-      appendLog("⚠️ Requesting Always authorization for SLC")
+      appendLog("⚠️ Requesting Always authorization for SLC. Distance filter: \(config.distanceFilter)m")
     }
 
     self.locationManager = lm
-    appendLog("📡 SLC registration complete. Config: deviceId=\(config.deviceId)")
+    let authStatus = CLLocationManager.authorizationStatus().rawValue
+    appendLog("📡 SLC registration complete. Auth=\(authStatus), Distance=\(config.distanceFilter)m, DeviceId=\(config.deviceId)")
   }
 
   /// Called from Dart (Phase 4) or when user explicitly stops.
@@ -181,19 +210,24 @@ class SLCBackgroundLocationManager: NSObject, CLLocationManagerDelegate, URLSess
       return
     }
 
+    // Pre-load config BEFORE re-registering monitoring to prevent race condition
     self.config = savedConfig
-    appendLog("🔄 SLC wake-up: restoring config from UserDefaults")
+    appendLog("🔄 SLC wake-up: restoring config from UserDefaults with distance filter: \(savedConfig.distanceFilter)m")
 
     let lm = CLLocationManager()
     lm.delegate = self
     lm.allowsBackgroundLocationUpdates = true
     lm.pausesLocationUpdatesAutomatically = false
+    // Use HundredMeters for consistency (same as startSLC)
+    lm.desiredAccuracy = kCLLocationAccuracyHundredMeters
+    lm.distanceFilter = savedConfig.distanceFilter  // Restore distance filter from saved config
 
     // Re-start monitoring so iOS keeps sending SLC events
     lm.startMonitoringSignificantLocationChanges()
     self.locationManager = lm
 
-    appendLog("📡 SLC monitoring re-registered after wake-up")
+    appendLog("📡 SLC monitoring re-registered after wake-up with \(savedConfig.distanceFilter)m filter")
+    appendLog("🏃 Pre-loaded config in memory to prevent race conditions during location delivery")
   }
 
   func isSLCActive() -> Bool {
@@ -215,11 +249,47 @@ class SLCBackgroundLocationManager: NSObject, CLLocationManagerDelegate, URLSess
     // If config was nil (e.g. wake-up race), cache it
     if self.config == nil { self.config = config }
 
-    for location in locations {
-      let payload = buildPayload(location: location, config: config)
-      appendLog("📍 SLC location: \(location.coordinate.latitude),\(location.coordinate.longitude) " +
-                "speed=\(location.speed) accuracy=\(location.horizontalAccuracy)")
-      sendToServer(payload: payload, config: config)
+    // Filter locations by accuracy and recency before sending
+    let validLocations = locations.filter { location in
+      // Only use recent locations (last 30 seconds)
+      let age = -location.timestamp.timeIntervalSinceNow
+      let isRecent = age < 30
+      
+      // Only use accurate locations (±1000m max horizontal accuracy)
+      let isAccurate = location.horizontalAccuracy > 0 && location.horizontalAccuracy <= minAccuracyThreshold
+      
+      return isRecent && isAccurate
+    }
+    
+    if validLocations.isEmpty {
+      appendLog("⚠️ No valid locations (all filtered by accuracy or recency)")
+      return
+    }
+    
+    let now = Date().timeIntervalSince1970
+    
+    for location in validLocations {
+      // Implement deduplication: only send if moved > 50m OR > 60 seconds since last send
+      let distance = lastSentLocation?.distance(from: location) ?? Double.infinity
+      let timeSinceLastSend = now - lastSentTimestamp
+      
+      let shouldSend = distance > locationDeduplicationThreshold || timeSinceLastSend > 60
+      
+      if shouldSend {
+        let payload = buildPayload(location: location, config: config)
+        appendLog("📍 SLC location: \(location.coordinate.latitude),\(location.coordinate.longitude) " +
+                  "speed=\(location.speed) accuracy=\(location.horizontalAccuracy)m")
+        
+        if distance != Double.infinity {
+          appendLog("📏 Distance from last: \(Int(distance))m (threshold: \(Int(locationDeduplicationThreshold))m)")
+        }
+        
+        sendToServer(payload: payload, config: config)
+        lastSentLocation = location
+        lastSentTimestamp = now
+      } else {
+        appendLog("↩️ Skipped duplicate location (distance: \(Int(distance))m, time: \(Int(timeSinceLastSend))s)")
+      }
     }
   }
 
