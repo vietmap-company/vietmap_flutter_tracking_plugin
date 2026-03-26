@@ -6,7 +6,7 @@ import 'dart:io';
 import 'gpx_simulator.dart';
 import 'package:flutter/services.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart' ;
 const slcChannel = MethodChannel('vietmap_tracking_plugin/slc');
 
 void main() {
@@ -102,7 +102,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
       // Configure VietmapTrackingSDK with API key
       print('🔧 Configuring VietmapTrackingSDK with deviceId: $_deviceId');
       await _controller.configure(
-        'c8f1a7e94d2b6053fa18e0c9b7d46a5213e89bcf0a47d195',
+        dotenv.env['kVietmapApiKey'] ?? '',
         baseURL: 'https://tracking.fleetwork.vn/api/v1',
       );
       print('✅ VietmapTrackingSDK configured successfully');
@@ -839,7 +839,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
     try {
       _addSLCLog('📡 Starting SLC monitoring with deviceId: $_deviceId...');
       await slcChannel.invokeMethod('startSLC', {
-        'apiKey': 'c8f1a7e94d2b6053fa18e0c9b7d46a5213e89bcf0a47d195',
+        'apiKey': dotenv.env['kTrackingApiKey'],
         'deviceId': _deviceId,
         'vehicleId': 'vehicle_001',
         'userId': 'user_001',
