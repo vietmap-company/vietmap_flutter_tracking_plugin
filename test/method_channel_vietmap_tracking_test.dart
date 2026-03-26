@@ -2,11 +2,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vietmap_tracking_plugin/src/platform/method_channel_vietmap_tracking.dart';
 import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
-
+import 'package:flutter_dotenv/flutter_dotenv.dart' ;
 // Real API keys for accurate testing
-const kVietmapApiKey = '0cd03613175a67f87567f86f0ba2f3b818e3a2b5f2c2634b';
-const kAlertApiKey = '727494d3eb92b2f8d3a6aea1d8caf607f158bfb179776f45';
-const kAlertApiId = 'a415885a-eb96-4463-8434-41afe0398f2e';
+final kVietmapApiKey = dotenv.env['kVietmapApiKey'] ?? '';
+final kAlertApiKey = dotenv.env['kAlertApiKey'] ?? '';
+final kAlertApiId = dotenv.env['kAlertApiId'] ?? '';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
