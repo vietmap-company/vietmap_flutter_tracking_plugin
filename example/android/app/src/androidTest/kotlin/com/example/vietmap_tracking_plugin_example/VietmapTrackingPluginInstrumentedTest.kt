@@ -12,11 +12,47 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import java.util.Properties
 
-// Real API keys for accurate testing
-private const val VIETMAP_API_KEY = "0cd03613175a67f87567f86f0ba2f3b818e3a2b5f2c2634b"
-private const val ALERT_API_KEY = "727494d3eb92b2f8d3a6aea1d8caf607f158bfb179776f45"
-private const val ALERT_API_ID = "a415885a-eb96-4463-8434-41afe0398f2e"
+/**
+ * Loads API keys from androidTest/assets/test.env at runtime.
+ * File format: KEY=value (one per line, no quotes).
+ * The file is bundled as an androidTest asset and never committed with real keys in source.
+ */
+private object TestEnv {
+    private val props: Properties by lazy {
+        val p = Properties()
+        try {
+            val ctx = InstrumentationRegistry.getInstrumentation().context
+            ctx.assets.open("test.env").bufferedReader().use { reader ->
+                reader.forEachLine { line ->
+                    val trimmed = line.trim()
+                    if (trimmed.isNotEmpty() && !trimmed.startsWith("#")) {
+                        val idx = trimmed.indexOf('=')
+                        if (idx > 0) {
+                            val key = trimmed.substring(0, idx).trim()
+                            val value = trimmed.substring(idx + 1).trim()
+                                .removePrefix("'").removeSuffix("'")
+                                .removePrefix("\"").removeSuffix("\"")
+                                .removeSuffix(";")
+                            p.setProperty(key, value)
+                        }
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("TestEnv", "Could not load test.env: ${e.message}")
+        }
+        p
+    }
+
+    fun get(key: String, fallback: String = ""): String = props.getProperty(key, fallback)
+}
+
+// API keys loaded from androidTest/assets/test.env — not hardcoded in source
+private val VIETMAP_API_KEY get() = TestEnv.get("VIETMAP_API_KEY")
+private val ALERT_API_KEY   get() = TestEnv.get("ALERT_API_KEY")
+private val ALERT_API_ID    get() = TestEnv.get("ALERT_API_ID")
 
 /**
  * Instrumented tests for VietmapTrackingPlugin — Android bridge layer.

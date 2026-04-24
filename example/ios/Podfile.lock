@@ -1,6 +1,8 @@
 PODS:
   - background_location_2 (0.0.1):
     - Flutter
+  - battery_plus (1.0.0):
+    - Flutter
   - connectivity_plus (0.0.1):
     - Flutter
   - device_info_plus (0.0.1):
@@ -15,6 +17,8 @@ PODS:
     - FlutterMacOS
   - integration_test (0.0.1):
     - Flutter
+  - permission_handler_apple (9.3.0):
+    - Flutter
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
@@ -25,6 +29,7 @@ PODS:
 
 DEPENDENCIES:
   - background_location_2 (from `.symlinks/plugins/background_location_2/ios`)
+  - battery_plus (from `.symlinks/plugins/battery_plus/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
   - Flutter (from `Flutter`)
@@ -32,16 +37,16 @@ DEPENDENCIES:
   - flutter_local_notifications (from `.symlinks/plugins/flutter_local_notifications/ios`)
   - geolocator_apple (from `.symlinks/plugins/geolocator_apple/darwin`)
   - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - vietmap_tracking_plugin (from `.symlinks/plugins/vietmap_tracking_plugin/ios`)
-
-SPEC REPOS:
-  trunk:
-    - VietmapTrackingSDK
+  - VietmapTrackingSDK (from `/Users/khiempg/Develop/map-sdk-tracking/ios`)
 
 EXTERNAL SOURCES:
   background_location_2:
     :path: ".symlinks/plugins/background_location_2/ios"
+  battery_plus:
+    :path: ".symlinks/plugins/battery_plus/ios"
   connectivity_plus:
     :path: ".symlinks/plugins/connectivity_plus/ios"
   device_info_plus:
@@ -56,13 +61,18 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/geolocator_apple/darwin"
   integration_test:
     :path: ".symlinks/plugins/integration_test/ios"
+  permission_handler_apple:
+    :path: ".symlinks/plugins/permission_handler_apple/ios"
   shared_preferences_foundation:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   vietmap_tracking_plugin:
     :path: ".symlinks/plugins/vietmap_tracking_plugin/ios"
+  VietmapTrackingSDK:
+    :path: "/Users/khiempg/Develop/map-sdk-tracking/ios"
 
 SPEC CHECKSUMS:
   background_location_2: 738e207c87ea5ee183a4e234d5766be4cdb019a7
+  battery_plus: b42253f6d2dde71712f8c36fef456d99121c5977
   connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
@@ -70,10 +80,11 @@ SPEC CHECKSUMS:
   flutter_local_notifications: a5a732f069baa862e728d839dd2ebb904737effb
   geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
   vietmap_tracking_plugin: e3a48b3cee806791b554d665622ae20e8e2091a4
-  VietmapTrackingSDK: a47ee86703a3a2cea313de0cb4186ba7c37ecfbe
+  VietmapTrackingSDK: 4dbdbe3dbe98bcbeae7a81755c28fe64b7e72319
 
-PODFILE CHECKSUM: 3c63482e143d1b91d2d2560aee9fb04ecc74ac7e
+PODFILE CHECKSUM: 153bd90720e1a8b85f55ea123e92db3308268dbb
 
 COCOAPODS: 1.16.2

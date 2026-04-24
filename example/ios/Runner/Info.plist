@@ -45,7 +45,13 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	
+	<!-- Notification permission (needed for Fake GPS warn policy) -->
+	<key>NSUserNotificationUsageDescription</key>
+	<string>Vietmap Tracking needs notification permission to warn you when a fake GPS location is detected.</string>
+
 	<!-- Location permissions -->
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>This app needs location access to track your position for navigation and delivery services.</string>
@@ -62,10 +68,14 @@
 		<string>fetch</string>
 	</array>
 	
-	<!-- Flutter background service -->
+	<!-- BGTask identifiers -->
+	<!-- SDK BGAppRefreshTask: keeps CLLocationManager alive + requests location in background -->
+	<!-- SDK BGProcessingTask: uploads pending batch (requiresNetworkConnectivity=true) -->
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>$(PRODUCT_BUNDLE_IDENTIFIER).background_service</string>
+		<string>com.vietmaptrackingsdk.background-location</string>
+		<string>com.vietmaptrackingsdk.location-sync</string>
 	</array>
 </dict>
 </plist>

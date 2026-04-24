@@ -4,10 +4,45 @@ import XCTest
 
 @testable import vietmap_tracking_plugin
 
-// Real API keys for accurate testing
-private let kVietmapApiKey = "0cd03613175a67f87567f86f0ba2f3b818e3a2b5f2c2634b"
-private let kAlertApiKey = "727494d3eb92b2f8d3a6aea1d8caf607f158bfb179776f45"
-private let kAlertApiId = "a415885a-eb96-4463-8434-41afe0398f2e"
+/// Loads API keys from RunnerTests/test.env bundled into the test target.
+/// File format: KEY=value (one per line, no quotes, no semicolons).
+/// Keys are NOT hardcoded in source — file is in .gitignore for public repos,
+/// but committed here so that CI/CD and teammates can run tests with real keys.
+private enum TestEnv {
+    private static let values: [String: String] = {
+        // test.env is added as a resource to the RunnerTests target
+        guard let url = Bundle(for: VietmapTrackingPluginTests.self)
+                            .url(forResource: "test", withExtension: "env"),
+              let content = try? String(contentsOf: url, encoding: .utf8) else {
+            print("[TestEnv] WARNING: test.env not found in test bundle")
+            return [:]
+        }
+        var dict = [String: String]()
+        for line in content.components(separatedBy: .newlines) {
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            guard !trimmed.isEmpty, !trimmed.hasPrefix("#"),
+                  let eqRange = trimmed.range(of: "=") else { continue }
+            let key = String(trimmed[trimmed.startIndex..<eqRange.lowerBound])
+                        .trimmingCharacters(in: .whitespaces)
+            var value = String(trimmed[eqRange.upperBound...])
+                        .trimmingCharacters(in: .whitespaces)
+            // Strip optional surrounding quotes and trailing semicolons
+            for q in ["'", "\""] { value = value.trimmingCharacters(in: CharacterSet(charactersIn: q)) }
+            value = value.hasSuffix(";") ? String(value.dropLast()) : value
+            dict[key] = value
+        }
+        return dict
+    }()
+
+    static func get(_ key: String, fallback: String = "") -> String {
+        return values[key] ?? fallback
+    }
+}
+
+// API keys loaded from RunnerTests/test.env at runtime — not hardcoded in source
+private var kVietmapApiKey: String { TestEnv.get("VIETMAP_API_KEY") }
+private var kAlertApiKey:   String { TestEnv.get("ALERT_API_KEY") }
+private var kAlertApiId:    String { TestEnv.get("ALERT_API_ID") }
 
 /// Comprehensive unit tests for VietmapTrackingPlugin — iOS Flutter bridge layer.
 ///
