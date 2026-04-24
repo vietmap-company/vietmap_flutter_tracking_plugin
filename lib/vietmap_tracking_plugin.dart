@@ -1,5 +1,4 @@
 /// Vietmap Tracking Plugin - GPS Location Tracking with VietmapTrackingSDK
-library vietmap_tracking_plugin;
 
 // Export models
 export 'src/models/location_tracking_config.dart';

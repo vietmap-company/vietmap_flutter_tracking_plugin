@@ -1,6 +1,6 @@
 name: vietmap_tracking_plugin
 description: A comprehensive Flutter plugin for GPS tracking and location data transmission to Vietmap's tracking API with background service support.
-version: 1.0.0-alpha.1
+version: 1.0.1
 homepage: https://github.com/vietmap-company/vietmap_tracking_plugin
 repository: https://github.com/vietmap-company/vietmap_tracking_plugin
 issue_tracker: https://github.com/vietmap-company/vietmap_tracking_plugin/issues
@@ -44,8 +44,6 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
-  assets:
-    - .env
   # This section identifies this Flutter project as a plugin project.
   # The 'pluginClass' specifies the class (in Java, Kotlin, Swift, Objective-C, etc.)
   # which should be registered in the plugin registry. This is required for

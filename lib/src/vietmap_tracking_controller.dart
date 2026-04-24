@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:developer' as developer;
 import 'models/location_tracking_config.dart';
 import 'models/location_data.dart';
 import 'models/tracking_status.dart';
@@ -31,8 +32,13 @@ class VietmapTrackingController {
       final result = await _platform.configure(apiKey, baseURL);
       _isConfigured = result;
       return result;
-    } catch (e) {
-      print('Failed to configure VietmapTrackingSDK: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to configure VietmapTrackingSDK',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -52,8 +58,13 @@ class VietmapTrackingController {
 
     try {
       return await _platform.configureAlertAPI(apiKey, apiID);
-    } catch (e) {
-      print('Failed to configure Alert API: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to configure Alert API',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -64,8 +75,13 @@ class VietmapTrackingController {
   Future<PermissionResult> requestLocationPermissions() async {
     try {
       return await _platform.requestLocationPermissions();
-    } catch (e) {
-      print('Failed to request location permissions: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to request location permissions',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -76,8 +92,13 @@ class VietmapTrackingController {
   Future<PermissionResult> hasLocationPermissions() async {
     try {
       return await _platform.hasLocationPermissions();
-    } catch (e) {
-      print('Failed to check location permissions: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to check location permissions',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -88,8 +109,13 @@ class VietmapTrackingController {
   Future<String> requestAlwaysLocationPermissions() async {
     try {
       return await _platform.requestAlwaysLocationPermissions();
-    } catch (e) {
-      print('Failed to request always permissions: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to request always permissions',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return 'denied';
     }
   }
@@ -119,8 +145,13 @@ class VietmapTrackingController {
       }
 
       return await _platform.startTracking(config);
-    } catch (e) {
-      print('Failed to start tracking: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to start tracking',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -131,8 +162,13 @@ class VietmapTrackingController {
   Future<bool> stopTracking() async {
     try {
       return await _platform.stopTracking();
-    } catch (e) {
-      print('Failed to stop tracking: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to stop tracking',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -149,8 +185,13 @@ class VietmapTrackingController {
 
     try {
       return await _platform.getCurrentLocation();
-    } catch (e) {
-      print('Failed to get current location: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to get current location',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -161,8 +202,13 @@ class VietmapTrackingController {
   Future<bool> isTrackingActive() async {
     try {
       return await _platform.isTrackingActive();
-    } catch (e) {
-      print('Failed to check tracking status: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to check tracking status',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -173,8 +219,13 @@ class VietmapTrackingController {
   Future<TrackingStatus> getTrackingStatus() async {
     try {
       return await _platform.getTrackingStatus();
-    } catch (e) {
-      print('Failed to get tracking status: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to get tracking status',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -187,8 +238,13 @@ class VietmapTrackingController {
   Future<bool> updateTrackingConfig(LocationTrackingConfig config) async {
     try {
       return await _platform.updateTrackingConfig(config);
-    } catch (e) {
-      print('Failed to update tracking config: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to update tracking config',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -211,8 +267,13 @@ class VietmapTrackingController {
 
     try {
       return await _platform.getTrackingHealthStatus();
-    } catch (e) {
-      print('Failed to get tracking health status: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to get tracking health status',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       rethrow;
     }
   }
@@ -223,8 +284,13 @@ class VietmapTrackingController {
   Future<bool> turnOnAlert() async {
     try {
       return await _platform.turnOnAlert();
-    } catch (e) {
-      print('Failed to turn on alert: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to turn on alert',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }
@@ -235,8 +301,13 @@ class VietmapTrackingController {
   Future<bool> turnOffAlert() async {
     try {
       return await _platform.turnOffAlert();
-    } catch (e) {
-      print('Failed to turn off alert: $e');
+    } catch (e, stackTrace) {
+      developer.log(
+        'Failed to turn off alert',
+        name: 'VietmapTrackingController',
+        error: e,
+        stackTrace: stackTrace,
+      );
       return false;
     }
   }

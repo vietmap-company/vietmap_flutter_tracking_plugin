@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-04-24
+
+### Changed
+
+- Improve battery efficiency for devices by optimizing background tracking intervals and reducing wakeups.
+- Reduce unnecessary location requests when tracking is idle or paused.
+- Add offline tracking support to queue location events when the network is unavailable.
+- Retry queued uploads automatically when connectivity is restored.
+- Improve tracking stability when switching between foreground and background.
+
 ## [1.0.0] - 2026-02-27
 
 ### Added
