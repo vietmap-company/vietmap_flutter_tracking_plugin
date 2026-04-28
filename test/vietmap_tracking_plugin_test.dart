@@ -66,29 +66,60 @@ void main() {
   });
 
   group('LocationData', () {
-    test('should serialize to JSON correctly', () {
+    test('should serialize to JSON correctly (new contract)', () {
       final locationData = LocationData(
         latitude: 21.028511,
         longitude: 105.804817,
         altitude: 10.0,
         accuracy: 5.0,
-        speed: 2.5,
+        speed: 2.567,
         heading: 90.0,
         timestamp: 1234567890,
+        metaData: {'source': 'gps', 'confidence': 0.95},
       );
 
       final json = locationData.toJson();
 
-      expect(json['latitude'], 21.028511);
-      expect(json['longitude'], 105.804817);
-      expect(json['altitude'], 10.0);
-      expect(json['accuracy'], 5.0);
-      expect(json['speed'], 2.5);
-      expect(json['bearing'], 90.0);
-      expect(json['timestamp'], 1234567890);
+      expect(json['lat'], closeTo(21.028511, 1e-12));
+      expect(json['lng'], closeTo(105.804817, 1e-12));
+      expect(json['speed'], isA<int>());
+      expect(json['speed'], 2);
+      expect(json['heading'], 90.0);
+      expect(json['time'], 1234567890);
+      expect(json.containsKey('timestamp'), false);
+      expect(json['metaData'], {'source': 'gps', 'confidence': 0.95});
+      
+      // Verify accuracy and altitude are NOT included in API payload
+      expect(json.containsKey('accuracy'), false);
+      expect(json.containsKey('altitude'), false);
+      expect(json.containsKey('status'), false);
     });
 
-    test('should deserialize from JSON correctly', () {
+    test('should deserialize from new contract JSON', () {
+      final json = {
+        'lat': 21.028511,
+        'lng': 105.804817,
+        'altitude': 10.0,
+        'accuracy': 5.0,
+        'speed': 2,
+        'heading': 90.0,
+        'time': 1234567890,
+        'metaData': {'source': 'gps'},
+      };
+
+      final locationData = LocationData.fromJson(json);
+
+      expect(locationData.latitude, 21.028511);
+      expect(locationData.longitude, 105.804817);
+      expect(locationData.altitude, 10.0);
+      expect(locationData.accuracy, 5.0);
+      expect(locationData.speed, 2.0);
+      expect(locationData.heading, 90.0);
+      expect(locationData.timestamp, 1234567890);
+      expect(locationData.metaData, {'source': 'gps'});
+    });
+
+    test('should deserialize from legacy JSON (backward compatible)', () {
       final json = {
         'latitude': 21.028511,
         'longitude': 105.804817,
@@ -103,9 +134,6 @@ void main() {
 
       expect(locationData.latitude, 21.028511);
       expect(locationData.longitude, 105.804817);
-      expect(locationData.altitude, 10.0);
-      expect(locationData.accuracy, 5.0);
-      expect(locationData.speed, 2.5);
       expect(locationData.heading, 90.0);
       expect(locationData.timestamp, 1234567890);
     });
@@ -122,6 +150,51 @@ void main() {
       );
 
       expect(locationData.dateTime.millisecondsSinceEpoch, 1234567890000);
+    });
+
+    test('should clamp speed to 0..32767 range', () {
+      final highSpeed = LocationData(
+        latitude: 10.0,
+        longitude: 106.0,
+        altitude: 0.0,
+        accuracy: 5.0,
+        speed: 50000.0,
+        heading: 0.0,
+        timestamp: 0,
+      );
+
+      final json = highSpeed.toJson();
+      expect(json['speed'], 32767);
+
+      final negativeSpeed = LocationData(
+        latitude: 10.0,
+        longitude: 106.0,
+        altitude: 0.0,
+        accuracy: 5.0,
+        speed: -5.0,
+        heading: 0.0,
+        timestamp: 0,
+      );
+
+      final json2 = negativeSpeed.toJson();
+      expect(json2['speed'], 0);
+    });
+
+    test('should round lat/lng to 12 decimal places', () {
+      final locationData = LocationData(
+        latitude: 10.77191234567890,
+        longitude: 106.70109876543210,
+        altitude: 0.0,
+        accuracy: 5.0,
+        speed: 10.0,
+        heading: 0.0,
+        timestamp: 0,
+      );
+
+      final json = locationData.toJson();
+
+      expect(json['lat'], closeTo(10.771912345679, 1e-12));
+      expect(json['lng'], closeTo(106.701098765432, 1e-12));
     });
   });
 

@@ -2,11 +2,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vietmap_tracking_plugin/src/platform/method_channel_vietmap_tracking.dart';
 import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart' ;
-// Real API keys for accurate testing
-final kVietmapApiKey = dotenv.env['kVietmapApiKey'] ?? '';
-final kAlertApiKey = dotenv.env['kAlertApiKey'] ?? '';
-final kAlertApiId = dotenv.env['kAlertApiId'] ?? '';
+
+// Deterministic test values — unit tests should not depend on local .env files.
+const kVietmapApiKey = 'test_vietmap_api_key';
+const kAlertApiKey = 'test_alert_api_key';
+const kAlertApiId = 'test_alert_api_id';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -692,6 +692,69 @@ void main() {
 
       expect(
         () => platform.updateTrackingConfig(TrackingPresets.general()),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  // ============================================================
+  // MARK: - getTrackingHistory
+  // ============================================================
+
+  group('getTrackingHistory', () {
+    test('should invoke method with correct arguments', () async {
+      String? capturedMethod;
+      Map<Object?, Object?>? capturedArgs;
+
+      mockHandler = (MethodCall call) async {
+        capturedMethod = call.method;
+        capturedArgs = call.arguments as Map<Object?, Object?>;
+        return '{"data": []}';
+      };
+
+      await platform.getTrackingHistory(
+        userId: 'driver_001',
+        fromTime: 1700000000000,
+        toTime: 1700003600000,
+        pageNumber: 2,
+        pageSize: 50,
+        sortBy: 'timestamp',
+        sortDescending: true,
+      );
+
+      expect(capturedMethod, 'getTrackingHistory');
+      expect(capturedArgs!['userId'], 'driver_001');
+      expect(capturedArgs!['fromTime'], 1700000000000);
+      expect(capturedArgs!['toTime'], 1700003600000);
+      expect(capturedArgs!['pageNumber'], 2);
+      expect(capturedArgs!['pageSize'], 50);
+      expect(capturedArgs!['sortBy'], 'timestamp');
+      expect(capturedArgs!['sortDescending'], true);
+    });
+
+    test('should return raw history json', () async {
+      mockHandler = (MethodCall call) async =>
+          '{"data":[{"latitude":10.77,"longitude":106.70,"timestamp":1700000000000}]}';
+
+      final result = await platform.getTrackingHistory(
+        userId: 'driver_001',
+        fromTime: 1700000000000,
+        toTime: 1700003600000,
+      );
+
+      expect(result, contains('"data"'));
+      expect(result, contains('"latitude"'));
+    });
+
+    test('should throw on null result', () async {
+      mockHandler = (MethodCall call) async => null;
+
+      expect(
+        () => platform.getTrackingHistory(
+          userId: 'driver_001',
+          fromTime: 1700000000000,
+          toTime: 1700003600000,
+        ),
         throwsA(isA<Exception>()),
       );
     });

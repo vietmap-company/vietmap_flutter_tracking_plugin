@@ -19,6 +19,10 @@ class TrackingLocation {
   static bool handleCheckInOut = false;
   static Timer? timerGetLocation;
 
+  static void _logSection(String section, {bool end = false}) {
+    debugPrint('=======${end ? 'End ' : ''}$section=======');
+  }
+
   static bool isLocationStill({
     required GpsLocation previousLocation,
     required GpsLocation currentLocation,
@@ -313,37 +317,52 @@ class TrackingLocation {
   }
 
   static startTracking() async {
-    // Get tracking interval from preferences (default 30 seconds)
-    timeSendServer = await VietMapPreference().getTrackingInterval();
-    debugPrint("📍 Starting tracking with interval: ${timeSendServer}s");
+    _logSection('Start Tracking Location');
+    try {
+      // Get tracking interval from preferences (default 30 seconds)
+      timeSendServer = await VietMapPreference().getTrackingInterval();
+      debugPrint("📍 Starting tracking with interval: ${timeSendServer}s");
 
-    /// Get location with configurable interval
-    final duration = Duration(seconds: timeSendServer);
-    timerGetLocation ??= Timer.periodic(duration, (timer) {
+      /// Get location with configurable interval
+      final duration = Duration(seconds: timeSendServer);
+      timerGetLocation ??= Timer.periodic(duration, (timer) {
+        handleFollowUser();
+      });
       handleFollowUser();
-    });
-    handleFollowUser();
+    } finally {
+      _logSection('Start Tracking Location', end: true);
+    }
   }
 
   static stopTracking() {
-    timerGetLocation?.cancel();
-    timerGetLocation = null;
+    _logSection('Stop Tracking Location');
+    try {
+      timerGetLocation?.cancel();
+      timerGetLocation = null;
+    } finally {
+      _logSection('Stop Tracking Location', end: true);
+    }
   }
 
   /// Update tracking interval and restart tracking if currently running
   static updateTrackingInterval(int seconds) async {
-    timeSendServer = seconds;
-    await VietMapPreference().setTrackingInterval(seconds);
+    _logSection('Update Tracking Interval');
+    try {
+      timeSendServer = seconds;
+      await VietMapPreference().setTrackingInterval(seconds);
 
-    // If tracking is currently running, restart with new interval
-    if (timerGetLocation != null) {
-      debugPrint("🔄 Updating tracking interval to ${seconds}s and restarting");
-      stopTracking();
-      await startTracking();
-    } else {
-      debugPrint(
-        "⏱️ Tracking interval updated to ${seconds}s (will apply on next start)",
-      );
+      // If tracking is currently running, restart with new interval
+      if (timerGetLocation != null) {
+        debugPrint("🔄 Updating tracking interval to ${seconds}s and restarting");
+        stopTracking();
+        await startTracking();
+      } else {
+        debugPrint(
+          "⏱️ Tracking interval updated to ${seconds}s (will apply on next start)",
+        );
+      }
+    } finally {
+      _logSection('Update Tracking Interval', end: true);
     }
   }
 }
