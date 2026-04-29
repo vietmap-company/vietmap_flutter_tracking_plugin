@@ -726,15 +726,16 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         nativeLog("🚀 startTracking | bg=\(backgroundMode) \(triggerMode) mock=\(allowMockLocation) smartBattery=\(smartBatteryEnabled)")
         nativeLog("🆔 ids | deviceId=\(deviceId ?? "nil") userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
 
-        // In the latest SDK, we use the configure(config: TrackingConfig) method
-        // to pass the mock location policy.
-        let config = TrackingConfig()
-        config.intervalMs = Int64(intervalMs)
-        config.distanceFilter = distanceFilter
-        config.allowMockLocation = allowMockLocation
-        trackingManager.configure(config: config)
+        // ── Fake GPS Toggle ──
+        // Since the current iOS SDK 1.3.5 doesn't have TrackingConfig.allowMockLocation yet,
+        // we use setFakeGPSPolicy to "ignore" detections if allowMockLocation is true.
+        // If false, we let the existing policy (set via setFakeGPSPolicy) handle it.
+        if allowMockLocation {
+            trackingManager.setFakeGPSPolicy("skip") 
+            nativeLog("🕵️ [FakeGPS] allowMockLocation=true -> force policy='skip'")
+        }
 
-        // Set metadata — must happen before startTracking() (matching Android pattern)
+        // ── iOS Battery Optimization via CoreLocation ──
         if let vid = vehicleId, !vid.isEmpty {
             trackingManager.setVehicleId(vid)
         }

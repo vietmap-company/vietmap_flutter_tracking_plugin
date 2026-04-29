@@ -788,14 +788,21 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
                 // Update configuration with allowMockLocation
                 try {
+                    // signature: (long intervalMs, double distanceFilter, boolean enableSpeedAlerts, 
+                    //             boolean allowMockLocation, double speedThreshold, String accuracy, 
+                    //             boolean enableBackgroundMode)
                     val config = TrackingConfig(
                         intervalMs,
                         distanceFilter,
-                        allowMockLocation
+                        false,             // enableSpeedAlerts
+                        allowMockLocation,
+                        0.0,               // speedThreshold
+                        "high",            // accuracy
+                        backgroundMode
                     )
-                    vietmapSDK.configure(config)
+                    vietmapSDK.setTrackingConfig(config)
                 } catch (e: Exception) {
-                    Log.w("VietmapTrackingPlugin", "⚠️ configure(TrackingConfig) failed, might be using older SDK: ${e.message}")
+                    Log.w("VietmapTrackingPlugin", "⚠️ setTrackingConfig(TrackingConfig) failed: ${e.message}")
                 }
 
                 // Set metadata — must happen before startTracking()
