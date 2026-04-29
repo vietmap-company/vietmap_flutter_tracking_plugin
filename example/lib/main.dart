@@ -1495,18 +1495,19 @@ class _TrackingPluginDemoPageState extends State<TrackingPluginDemoPage> {
 
   Future<void> _configure() async {
     try {
+      const trackingBaseUrl = 'https://staging.fleetwork.vn/api/v1';
       // 1. Configure tracking SDK
       await _plugin.configureTracking(
-        apiKey:  dotenv.env['VIETMAP_API_KEY'] ?? 'YOUR_API_KEY',
-        baseUrl: 'https://tracking.vietmap.vn',
+        apiKey: dotenv.env['key-stg'] ?? '',
+        baseUrl: trackingBaseUrl,
         authMode: useQueryParamAuth ? AuthMode.queryParam : AuthMode.header,
         autoUpload: true,
       );
 
       // 2. Configure speed-alert API (url defaults to Vietmap's endpoint)
       await _plugin.configureAlertAPI(
-        apiKey: dotenv.env['ALERT_API_KEY'] ?? 'YOUR_ALERT_KEY',
-        apiID:  dotenv.env['ALERT_API_ID']  ?? 'YOUR_ALERT_ID',
+        apiKey: dotenv.env['ALERT_API_KEY'] ?? '',
+        apiID: dotenv.env['ALERT_API_ID'] ?? '',
       );
 
       // 3. Optionally switch to zone-network-v2 endpoint

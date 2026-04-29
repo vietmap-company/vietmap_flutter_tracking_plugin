@@ -151,8 +151,8 @@ class TrackingProvider extends ChangeNotifier {
     _logSection('Configure SDK');
     try {
       debugPrint('Provider: configure tracking SDK and alert API');
-      const trackingBaseUrl = 'https://dricon.fastmap.vn/api/v1';
-      final trackingApiKey = dotenv.env['kTrackingApiKey'] ?? '';
+      const trackingBaseUrl = 'https://staging.fleetwork.vn/api/v1';
+      final trackingApiKey = dotenv.env['key-stg'] ?? '';
 
       await _controller.configure(
         trackingApiKey,
@@ -167,8 +167,8 @@ class TrackingProvider extends ChangeNotifier {
       );
 
       await _controller.configureAlertAPI(
-        dotenv.env['kAlertApiKey'] ?? '',
-        dotenv.env['kAlertApiId'] ?? '',
+        dotenv.env['ALERT_API_KEY'] ?? '',
+        dotenv.env['ALERT_API_ID'] ?? '',
       );
     } catch (e) {
       initError = e.toString();
@@ -681,11 +681,11 @@ class TrackingProvider extends ChangeNotifier {
       _logSection('Start SLC');
       addSLCLog('📡 Starting SLC with deviceId: $deviceId...');
       await ch.invokeMethod('startSLC', {
-        'apiKey': dotenv.env['kTrackingApiKey'] ?? '',
+        'apiKey': dotenv.env['key-stg'] ?? '',
         'deviceId': deviceId,
         'vehicleId': 'vehicle_001',
         'userId': effectiveUserId,
-        'apiEndpoint': 'https://tracking.fleetwork.vn/api/v1/gps-tracking/history',
+        'apiEndpoint': 'https://staging.fleetwork.vn/api/v1/gps-tracking/history',
         'distanceFilter': 500.0,
       });
       slcEnabled = true;
