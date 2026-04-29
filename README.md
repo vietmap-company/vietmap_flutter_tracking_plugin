@@ -37,13 +37,13 @@ A Flutter plugin for GPS location tracking with VietmapTrackingSDK integration, 
 | Platform | SDK | Version |
 |----------|-----|---------|
 | iOS      | VietmapTrackingSDK (CocoaPods) | 1.3.5 |
-| Android  | vietmap-tracking-sdk-android (JitPack) | 1.3.7 |
+| Android  | vietmap-tracking-sdk-android (Local) | 1.3.7 |
 
 ## Installation
 
 ```yaml
 dependencies:
-  vietmap_tracking_plugin: ^1.0.0
+  vietmap_tracking_plugin: ^1.1.0
 ```
 
 ```bash
@@ -63,6 +63,13 @@ Add the following permissions to your `ios/Runner/Info.plist`:
 <string>This app needs continuous location access to track your GPS location even when the app is in the background. This enables features like route tracking, delivery monitoring, and location-based services.</string>
 <key>NSLocationAlwaysUsageDescription</key>
 <string>This app needs background location access to provide continuous GPS tracking when the app is not actively in use.</string>
+```
+
+Add your Vietmap API key to `ios/Runner/Info.plist`:
+
+```xml
+<key>X-API-Key</key>
+<string>YOUR_VIETMAP_API_KEY</string>
 ```
 
 #### Background Modes Configuration
@@ -98,6 +105,7 @@ Add the following permissions to your `android/app/src/main/AndroidManifest.xml`
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
+```
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
@@ -206,38 +214,42 @@ Future<void> disableSpeedAlerts() async {
 }
 ```
 
-### Tracking Modes: Interval vs Distance
+### Tracking Modes: SDK Defaults vs Custom
 
-The plugin forwards both `intervalMs` and `distanceFilter` to the native SDK. Use the mode that matches your product behavior:
+The plugin supports optional `intervalMs` and `distanceFilter`. If omitted (null), the SDK will use its internal optimized defaults.
 
-| Mode | `intervalMs` | `distanceFilter` | Typical use case |
+| Mode | `intervalMs` | `distanceFilter` | Native SDK Behavior |
 |------|--------------|------------------|------------------|
-| Interval-based | `> 0` | `0` | Send updates on a fixed timer, even if the device barely moves. |
-| Distance-based | `0` | `> 0` | Send updates only after the device moves a minimum distance. |
-| Hybrid preset | `> 0` | `> 0` | Use tuned defaults from `TrackingPresets` for balanced tracking. |
-
-For a strict timer-only setup, set `distanceFilter: 0.0`. For a strict movement-only setup, set `intervalMs: 0`.
+| SDK Defaults | `null` | `null` | Optimized internal defaults for reliability and battery. |
+| Timer-only | `> 0` | `null` (or 0) | Update on fixed timer even if stationary. |
+| Movement-only| `null` (or 0) | `> 0` | Update only after moving minimum distance. |
+| Hybrid | `> 0` | `> 0` | Update based on whichever trigger fires first. |
 
 ```dart
-// Interval-based tracking: update every 5 seconds regardless of movement.
+// Use SDK internal defaults (Recommended for most apps)
+final defaultConfig = LocationTrackingConfig(
+  backgroundMode: true,
+  allowMockLocation: false,
+);
+
+// Custom interval tracking
 final intervalConfig = LocationTrackingConfig(
-  intervalMs: 5000,
-  distanceFilter: 0.0,
-  accuracy: LocationAccuracy.high,
+  intervalMs: 10000, // 10s
   backgroundMode: true,
 );
-
-// Distance-based tracking: update only after moving 50 meters.
-final distanceConfig = LocationTrackingConfig(
-  intervalMs: 0,
-  distanceFilter: 50.0,
-  accuracy: LocationAccuracy.high,
-  backgroundMode: true,
-);
-
-// Hybrid preset: the SDK uses tuned interval + distance defaults.
-final hybridConfig = TrackingPresets.navigation();
 ```
+
+### Mock Location Support
+
+You can now toggle whether to allow fake GPS or mock locations:
+
+```dart
+final config = LocationTrackingConfig(
+  allowMockLocation: true, // Allow user to use mock GPS (e.g., for testing)
+);
+```
+
+If set to `false` (default), the SDK will automatically block or skip fake location points.
 
 ### Offline Tracking and Manual Cache Sync
 

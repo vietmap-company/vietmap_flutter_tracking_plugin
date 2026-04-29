@@ -356,11 +356,11 @@ class TrackingProvider extends ChangeNotifier {
 
   LocationTrackingConfig get activeConfig {
     if (useCustomConfig) {
-      // Timer mode  → chỉ dùng interval, tắt distance filter (= 0)
-      // Distance mode → chỉ dùng distanceFilter, đặt interval rất lớn (= 0)
-      // Cả hai OFF   → dùng cả hai giá trị người dùng nhập
-      final int resolvedInterval = _trackingWithDistance ? 0 : customIntervalMs;
-      final double resolvedDistance = _trackingWithTimer ? 0.0 : customDistanceFilter;
+      // Timer mode  → chỉ dùng interval, null distance filter
+      // Distance mode → chỉ dùng distanceFilter, null interval
+      // Cả hai OFF   → dùng null cho cả hai (SDK defaults)
+      final int? resolvedInterval = _trackingWithDistance ? null : (_trackingWithTimer ? customIntervalMs : null);
+      final double? resolvedDistance = _trackingWithTimer ? null : (_trackingWithDistance ? customDistanceFilter : null);
 
       return LocationTrackingConfig(
         intervalMs: resolvedInterval,
@@ -375,9 +375,8 @@ class TrackingProvider extends ChangeNotifier {
         allowMockLocation: allowMockLocation,
       );
     }
+    // Default mode: let SDK decide its own defaults for interval/distance
     return LocationTrackingConfig(
-      intervalMs: 5000,
-      distanceFilter: 10,
       accuracy: LocationAccuracy.high,
       backgroundMode: true,
       notificationTitle: 'GPS Tracking',

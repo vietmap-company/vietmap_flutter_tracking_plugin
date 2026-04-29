@@ -1,13 +1,13 @@
 /// Configuration for location tracking
 class LocationTrackingConfig {
-  /// Interval between location updates in milliseconds
-  final int intervalMs;
+  /// Interval between location updates in milliseconds. Optional, SDK default used if null.
+  final int? intervalMs;
 
-  /// Minimum distance between location updates in meters
-  final double distanceFilter;
+  /// Minimum distance between location updates in meters. Optional, SDK default used if null.
+  final double? distanceFilter;
 
-  /// Desired accuracy level: 'high', 'medium', or 'low'
-  final LocationAccuracy accuracy;
+  /// Desired accuracy level: 'high', 'medium', or 'low'. Optional.
+  final LocationAccuracy? accuracy;
 
   /// Whether to continue tracking in background
   final bool backgroundMode;
@@ -21,10 +21,10 @@ class LocationTrackingConfig {
   /// Device ID for tracking identification
   final String? deviceId;
 
-  /// User ID for tracking identification
+  /// User ID for tracking identification (mapped to driverId in native SDKs)
   final String? userId;
 
-  /// Vehicle ID for tracking identification
+  /// Vehicle ID for tracking identification. Optional.
   final String? vehicleId;
 
   /// API endpoint for sending tracking data
@@ -34,10 +34,10 @@ class LocationTrackingConfig {
   final bool allowMockLocation;
 
   const LocationTrackingConfig({
-    required this.intervalMs,
-    required this.distanceFilter,
-    required this.accuracy,
-    required this.backgroundMode,
+    this.intervalMs,
+    this.distanceFilter,
+    this.accuracy,
+    this.backgroundMode = true,
     this.notificationTitle,
     this.notificationMessage,
     this.deviceId,
@@ -51,7 +51,7 @@ class LocationTrackingConfig {
   Map<String, dynamic> toJson() => {
     'intervalMs': intervalMs,
     'distanceFilter': distanceFilter,
-    'accuracy': accuracy.value,
+    'accuracy': accuracy?.value,
     'backgroundMode': backgroundMode,
     'notificationTitle': notificationTitle,
     'notificationMessage': notificationMessage,
@@ -65,10 +65,10 @@ class LocationTrackingConfig {
   /// Create from JSON
   factory LocationTrackingConfig.fromJson(Map<String, dynamic> json) {
     return LocationTrackingConfig(
-      intervalMs: json['intervalMs'] as int,
-      distanceFilter: (json['distanceFilter'] as num).toDouble(),
-      accuracy: LocationAccuracy.fromString(json['accuracy'] as String),
-      backgroundMode: json['backgroundMode'] as bool,
+      intervalMs: json['intervalMs'] as int?,
+      distanceFilter: (json['distanceFilter'] as num?)?.toDouble(),
+      accuracy: json['accuracy'] != null ? LocationAccuracy.fromString(json['accuracy'] as String) : null,
+      backgroundMode: json['backgroundMode'] as bool? ?? true,
       notificationTitle: json['notificationTitle'] as String?,
       notificationMessage: json['notificationMessage'] as String?,
       deviceId: json['deviceId'] as String?,
@@ -107,6 +107,7 @@ class LocationTrackingConfig {
       allowMockLocation: allowMockLocation ?? this.allowMockLocation,
     );
   }
+}
 }
 
 /// GPS accuracy levels

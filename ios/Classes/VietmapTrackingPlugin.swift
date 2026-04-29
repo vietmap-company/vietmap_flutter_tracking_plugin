@@ -701,10 +701,14 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         let args = call.arguments as? [String: Any]
         let backgroundMode = args?["backgroundMode"] as? Bool ?? true
-        let intervalMs = args?["intervalMs"] as? Int ?? 5000
-        let distanceFilter = args?["distanceFilter"] as? Double ?? 10.0
+        let intervalMsInput = args?["intervalMs"] as? Int
+        let distanceFilterInput = args?["distanceFilter"] as? Double
         let allowMockLocation = args?["allowMockLocation"] as? Bool ?? false
         
+        // Internal default values for logging
+        let intervalMs = intervalMsInput ?? -1
+        let distanceFilter = distanceFilterInput ?? -1.0
+
         let deviceId = args?["deviceId"] as? String
         let userId = args?["userId"] as? String
         let vehicleId = args?["vehicleId"] as? String
@@ -715,10 +719,12 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         // Determine trigger mode: SDK supports only ONE trigger mechanism
         let triggerMode: String
-        if intervalMs > 0 && distanceFilter <= 0 {
-            triggerMode = "⏱ TIMER ONLY (interval=\(intervalMs)ms)"
-        } else if distanceFilter > 0 && intervalMs <= 0 {
-            triggerMode = "📏 DISTANCE ONLY (distance=\(distanceFilter)m)"
+        if let interval = intervalMsInput, interval > 0, (distanceFilterInput == nil || distanceFilterInput! <= 0) {
+            triggerMode = "⏱ TIMER ONLY (interval=\(interval)ms)"
+        } else if let distance = distanceFilterInput, distance > 0, (intervalMsInput == nil || intervalMsInput! <= 0) {
+            triggerMode = "📏 DISTANCE ONLY (distance=\(distance)m)"
+        } else if intervalMsInput == nil && distanceFilterInput == nil {
+            triggerMode = "ℹ️ SDK DEFAULTS (No values passed to SDK)"
         } else {
             triggerMode = "⚠️ BOTH (interval=\(intervalMs)ms + distance=\(distanceFilter)m)"
         }
@@ -727,16 +733,52 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         nativeLog("🆔 ids | deviceId=\(deviceId ?? "nil") userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
 
         // ── Fake GPS Toggle ──
-        // Since the current iOS SDK 1.3.5 doesn't have TrackingConfig.allowMockLocation yet,
-        // we use setFakeGPSPolicy to "ignore" detections if allowMockLocation is true.
-        // If false, we let the existing policy (set via setFakeGPSPolicy) handle it.
-        if allowMockLocation {
-            trackingManager.setFakeGPSPolicy("skip") 
-            nativeLog("🕵️ [FakeGPS] allowMockLocation=true -> force policy='skip'")
-        }
+        let policy = allowMockLocation ? "allow" : "skip"
+        trackingManager.setFakeGPSPolicy(policy)
+        nativeLog("🕵️ [FakeGPS] allowMockLocation=\(allowMockLocation) -> force policy='\(policy)'")
 
         // ── iOS Battery Optimization via CoreLocation ──
         if let vid = vehicleId, !vid.isEmpty {
+            trackingManager.setVehicleId(vid)
+        }
+        if let uid = userId, !uid.isEmpty {
+            trackingManager.setDriverId(uid)
+        }
+
+        // ── iOS Battery Optimization via CoreLocation ──────────────────────────
+        if smartBatteryEnabled {
+            CLLocationManager().activityType = .automotiveNavigation
+            CLLocationManager().pausesLocationUpdatesAutomatically = true
+        } else {
+            CLLocationManager().activityType = .other
+            CLLocationManager().pausesLocationUpdatesAutomatically = false
+        }
+
+        // Logic check: if both are nil, call SDK's default startTracking
+        if intervalMsInput == nil && distanceFilterInput == nil {
+            trackingManager.startTracking(
+                enhancedBackgroundMode: backgroundMode
+            ) { [weak self] success, message in
+                self?.handleStartResult(success: success, message: message, result: result)
+            }
+        } else {
+            // Use provided values or -1 as fallback
+            trackingManager.startTracking(
+                enhancedBackgroundMode: backgroundMode,
+                intervalMs: intervalMs,
+                distanceFilter: distanceFilter
+            ) { [weak self] success, message in
+                self?.handleStartResult(success: success, message: message, result: result)
+            }
+        }
+    }
+
+    private func handleStartResult(success: Bool, message: String?, result: @escaping FlutterResult) {
+        self.nativeLog("🏁 startTracking result | success=\(success) message=\(message ?? "nil")")
+        DispatchQueue.main.async {
+            result(success)
+        }
+    }
             trackingManager.setVehicleId(vid)
         }
         if let uid = userId, !uid.isEmpty {
@@ -764,14 +806,14 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             intervalMs: intervalMs,
             distanceFilter: distanceFilter
         ) { [weak self] success, message in
-            self?.nativeLog("🏁 startTracking result | success=\(success) message=\(message ?? "nil")")
-            DispatchQueue.main.async {
-                if success {
-                    result(true)
-                } else {
-                    result(false)
-                }
-            }
+            self?.handleStartResult(success: success, message: message, result: result)
+        }
+    }
+
+    private func handleStartResult(success: Bool, message: String?, result: @escaping FlutterResult) {
+        self.nativeLog("🏁 startTracking result | success=\(success) message=\(message ?? "nil")")
+        DispatchQueue.main.async {
+            result(success)
         }
     }
 
