@@ -108,7 +108,6 @@ class LocationTrackingConfig {
     );
   }
 }
-}
 
 /// GPS accuracy levels
 enum LocationAccuracy {
