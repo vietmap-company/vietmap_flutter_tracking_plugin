@@ -37,7 +37,7 @@ A Flutter plugin for GPS location tracking with VietmapTrackingSDK integration, 
 | Platform | SDK | Version |
 |----------|-----|---------|
 | iOS      | VietmapTrackingSDK (CocoaPods) | 1.3.5 |
-| Android  | vietmap-tracking-sdk-android (JitPack) | 1.3.6 |
+| Android  | vietmap-tracking-sdk-android (JitPack) | 1.3.7 |
 
 ## Installation
 
@@ -268,10 +268,16 @@ await controller.clearCachedLocations();
 
 ### Fake GPS Detection
 
+Fake GPS detection is available by default, but the SDK stays in the `skip`
+policy unless you change it. In `skip` mode, the SDK only emits detection
+events for app logic; it does not warn, stop tracking, or upload fake records.
+To activate a response policy manually, call `setFakeGpsPolicy(...)` before
+`startTracking()`.
+
 ```dart
 final controller = VietmapTrackingController.instance;
 
-// Set one of: skip | warn | stopTracking | logToServer
+// Manual activation: choose a policy other than skip
 await controller.setFakeGpsPolicy(FakeGpsPolicy.warn);
 
 controller.onFakeGpsDetected.listen((event) {
@@ -583,9 +589,11 @@ await controller.configureCacheLimits(
 
 #### `setFakeGpsPolicy(String policy)`
 
-Sets policy for detected fake GPS points.
+Sets the fake GPS response policy before tracking starts.
 
-- `FakeGpsPolicy.skip` (default): ignore silently
+This is the manual activation method for the feature.
+
+- `FakeGpsPolicy.skip` (default): detect only, but do not warn/stop/upload
 - `FakeGpsPolicy.warn`: trigger warning notification (native debounce 30s)
 - `FakeGpsPolicy.stopTracking`: stop tracking on first detection
 - `FakeGpsPolicy.logToServer`: mark fake record and upload with `X-Fake-GPS: true`

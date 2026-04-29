@@ -30,6 +30,9 @@ class LocationTrackingConfig {
   /// API endpoint for sending tracking data
   final String? apiEndpoint;
 
+  /// Whether to allow mock/fake locations. If false (default), the SDK will block fake locations.
+  final bool allowMockLocation;
+
   const LocationTrackingConfig({
     required this.intervalMs,
     required this.distanceFilter,
@@ -41,6 +44,7 @@ class LocationTrackingConfig {
     this.userId,
     this.vehicleId,
     this.apiEndpoint,
+    this.allowMockLocation = false,
   });
 
   /// Convert to JSON for platform channel
@@ -55,6 +59,7 @@ class LocationTrackingConfig {
     'userId': userId,
     'vehicleId': vehicleId,
     'apiEndpoint': apiEndpoint,
+    'allowMockLocation': allowMockLocation,
   };
 
   /// Create from JSON
@@ -70,6 +75,7 @@ class LocationTrackingConfig {
       userId: json['userId'] as String?,
       vehicleId: json['vehicleId'] as String?,
       apiEndpoint: json['apiEndpoint'] as String?,
+      allowMockLocation: json['allowMockLocation'] as bool? ?? false,
     );
   }
 
@@ -85,6 +91,7 @@ class LocationTrackingConfig {
     String? userId,
     String? vehicleId,
     String? apiEndpoint,
+    bool? allowMockLocation,
   }) {
     return LocationTrackingConfig(
       intervalMs: intervalMs ?? this.intervalMs,
@@ -97,6 +104,7 @@ class LocationTrackingConfig {
       userId: userId ?? this.userId,
       vehicleId: vehicleId ?? this.vehicleId,
       apiEndpoint: apiEndpoint ?? this.apiEndpoint,
+      allowMockLocation: allowMockLocation ?? this.allowMockLocation,
     );
   }
 }

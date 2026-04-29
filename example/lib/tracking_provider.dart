@@ -78,6 +78,7 @@ class TrackingProvider extends ChangeNotifier {
 
   // ── Fake GPS ──────────────────────────────────────────────────────
   String fakeGpsPolicy = FakeGpsPolicy.skip;
+  bool allowMockLocation = false;
   FakeGpsEvent? lastFakeGpsEvent;
   final List<FakeGpsEvent> fakeGpsHistory = [];
   StreamSubscription<FakeGpsEvent>? _fakeGpsSub;
@@ -371,6 +372,7 @@ class TrackingProvider extends ChangeNotifier {
         deviceId: deviceId,
         userId: effectiveUserId,
         vehicleId: 'vehicle_001',
+        allowMockLocation: allowMockLocation,
       );
     }
     return LocationTrackingConfig(
@@ -383,6 +385,7 @@ class TrackingProvider extends ChangeNotifier {
       deviceId: deviceId,
       userId: effectiveUserId,
       vehicleId: 'vehicle_001',
+      allowMockLocation: allowMockLocation,
     );
   }
 
@@ -593,6 +596,11 @@ class TrackingProvider extends ChangeNotifier {
   Future<void> setFakeGpsPolicy(String policy) async {
     fakeGpsPolicy = policy;
     await _controller.setFakeGpsPolicy(policy);
+    notifyListeners();
+  }
+
+  void setAllowMockLocation(bool v) {
+    allowMockLocation = v;
     notifyListeners();
   }
 

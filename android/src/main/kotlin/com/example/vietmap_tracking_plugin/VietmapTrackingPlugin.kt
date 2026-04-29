@@ -772,6 +772,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 val backgroundMode = args?.get("backgroundMode") as? Boolean ?: true
                 val notificationTitle = args?.get("notificationTitle") as? String
                 val notificationMessage = args?.get("notificationMessage") as? String
+                val allowMockLocation = args?.get("allowMockLocation") as? Boolean ?: false
 
                 val deviceId = args?.get("deviceId") as? String
                 val userId = args?.get("userId") as? String
@@ -782,11 +783,24 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 this.userId = userId
                 this.vehicleId = vehicleId
 
-                Log.d("VietmapTrackingPlugin", "🚀 startTracking | interval=${intervalMs}ms distance=${distanceFilter}m bg=$backgroundMode")
+                Log.d("VietmapTrackingPlugin", "🚀 startTracking | interval=${intervalMs}ms distance=${distanceFilter}m bg=$backgroundMode mock=$allowMockLocation")
                 Log.d("VietmapTrackingPlugin", "🆔 device=$deviceId user=$userId vehicle=$vehicleId")
+
+                // Update configuration with allowMockLocation
+                try {
+                    val config = TrackingConfig(
+                        intervalMs,
+                        distanceFilter,
+                        allowMockLocation
+                    )
+                    vietmapSDK.configure(config)
+                } catch (e: Exception) {
+                    Log.w("VietmapTrackingPlugin", "⚠️ configure(TrackingConfig) failed, might be using older SDK: ${e.message}")
+                }
 
                 // Set metadata — must happen before startTracking()
                 if (!vehicleId.isNullOrEmpty()) vietmapSDK.setVehicleId(vehicleId)
+                if (!userId.isNullOrEmpty()) vietmapSDK.setDriverId(userId)
                 if (!notificationTitle.isNullOrEmpty()) vietmapSDK.setNotificationTitle(notificationTitle)
                 if (!notificationMessage.isNullOrEmpty()) vietmapSDK.setNotificationText(notificationMessage)
 

@@ -703,11 +703,12 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let backgroundMode = args?["backgroundMode"] as? Bool ?? true
         let intervalMs = args?["intervalMs"] as? Int ?? 5000
         let distanceFilter = args?["distanceFilter"] as? Double ?? 10.0
+        let allowMockLocation = args?["allowMockLocation"] as? Bool ?? false
         
         let deviceId = args?["deviceId"] as? String
         let userId = args?["userId"] as? String
         let vehicleId = args?["vehicleId"] as? String
-        
+
         self.deviceId = deviceId
         self.userId = userId
         self.vehicleId = vehicleId
@@ -722,8 +723,16 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             triggerMode = "⚠️ BOTH (interval=\(intervalMs)ms + distance=\(distanceFilter)m)"
         }
 
-        nativeLog("🚀 startTracking | bg=\(backgroundMode) \(triggerMode) smartBattery=\(smartBatteryEnabled)")
+        nativeLog("🚀 startTracking | bg=\(backgroundMode) \(triggerMode) mock=\(allowMockLocation) smartBattery=\(smartBatteryEnabled)")
         nativeLog("🆔 ids | deviceId=\(deviceId ?? "nil") userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
+
+        // In the latest SDK, we use the configure(config: TrackingConfig) method
+        // to pass the mock location policy.
+        let config = TrackingConfig()
+        config.intervalMs = Int64(intervalMs)
+        config.distanceFilter = distanceFilter
+        config.allowMockLocation = allowMockLocation
+        trackingManager.configure(config: config)
 
         // Set metadata — must happen before startTracking() (matching Android pattern)
         if let vid = vehicleId, !vid.isEmpty {

@@ -583,6 +583,22 @@ class _FakeGpsCard extends StatelessWidget {
                   ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text('Allow Mock Location:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              Transform.scale(
+                scale: 0.8,
+                child: Switch(
+                  value: p.allowMockLocation,
+                  onChanged: (v) => p.setAllowMockLocation(v),
+                  activeColor: Colors.purple,
+                ),
+              ),
+            ]),
+            const Text(
+              'If enabled, simulated locations will be processed as real points and bypass policies.',
+              style: TextStyle(fontSize: 11, color: Colors.purple),
+            ),
             const SizedBox(height: 6),
             Text(
               _policyDescription(p.fakeGpsPolicy),
