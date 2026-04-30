@@ -779,46 +779,9 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             result(success)
         }
     }
-            trackingManager.setVehicleId(vid)
-        }
-        if let uid = userId, !uid.isEmpty {
-            trackingManager.setDriverId(uid)
-        }
-
-        // ── iOS Battery Optimization via CoreLocation ──────────────────────────
-        // .automotiveNavigation: OS tự điều chỉnh distance filter theo vận tốc & góc cua.
-        //   Đường thẳng cao tốc → giãn khoảng cách lấy mẫu (pin tiết kiệm).
-        //   Ngã tư / vòng cua   → dồn dày điểm GPS (độ chính xác cao).
-        // pausesLocationUpdatesAutomatically: iOS tự cắt GPS khi xe đỗ lâu,
-        //   tự bật lại khi phát hiện rung/lăn bánh.
-        if smartBatteryEnabled {
-            CLLocationManager().activityType = .automotiveNavigation
-            CLLocationManager().pausesLocationUpdatesAutomatically = true
-            nativeLog("🔋 [SmartBattery] iOS activityType=.automotiveNavigation | pausesAuto=true")
-        } else {
-            CLLocationManager().activityType = .other
-            CLLocationManager().pausesLocationUpdatesAutomatically = false
-            nativeLog("🔋 [SmartBattery] iOS activityType=.other | pausesAuto=false")
-        }
-
-        trackingManager.startTracking(
-            enhancedBackgroundMode: backgroundMode,
-            intervalMs: intervalMs,
-            distanceFilter: distanceFilter
-        ) { [weak self] success, message in
-            self?.handleStartResult(success: success, message: message, result: result)
-        }
-    }
-
-    private func handleStartResult(success: Bool, message: String?, result: @escaping FlutterResult) {
-        self.nativeLog("🏁 startTracking result | success=\(success) message=\(message ?? "nil")")
-        DispatchQueue.main.async {
-            result(success)
-        }
-    }
 
     private func stopTracking(result: @escaping FlutterResult) {
-                    logSection("Stop Tracking SDK")
+        logSection("Stop Tracking SDK")
         guard isInitialized else {
             result(FlutterError(code: "SDK_NOT_INITIALIZED",
                               message: "VietmapTrackingSDK not initialized",
@@ -826,9 +789,9 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
 
-            nativeLog("🛑 stopTracking called")
-            trackingManager.stopTracking { [weak self] success, message in
-                self?.nativeLog("🏁 stopTracking result | success=\(success) message=\(message ?? "nil")")
+        nativeLog("🛑 stopTracking called")
+        trackingManager.stopTracking { [weak self] success, message in
+            self?.nativeLog("🏁 stopTracking result | success=\(success) message=\(message ?? "nil")")
             DispatchQueue.main.async {
                 if success {
                     result(true)
