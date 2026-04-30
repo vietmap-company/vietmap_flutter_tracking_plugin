@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-04-30
+
+### Changed
+
+- **Battery optimization** — Improved battery efficiency by optimizing GPS tracking intervals and reducing background wakeups.
+
+### Fixed
+
+- **Bug fixes** — Various stability improvements and bug fixes.
+
+---
+
 ## [1.0.2] - 2026-04-28
 
 ### Added
