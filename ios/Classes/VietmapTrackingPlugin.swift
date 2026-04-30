@@ -987,8 +987,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             self.nativeLog("🔄 updateTrackingConfig: stopped, restarting with new config...")
             self.trackingManager.startTracking(
                 enhancedBackgroundMode: backgroundMode,
-                intervalMs: intervalMsInput,
-                distanceFilter: distanceFilterInput
+                intervalMs: intervalMsInput ?? 10000,
+                distanceFilter: distanceFilterInput ?? 0.0
             ) { [weak self] success, message in
                 self?.nativeLog("✅ updateTrackingConfig restart | success=\(success) msg=\(message ?? "nil")")
                 self?.logCacheSnapshot("update-config/restart-callback")
