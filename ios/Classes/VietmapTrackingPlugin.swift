@@ -755,30 +755,21 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         }
 
         // Logic check: if both are nil, call SDK's default startTracking
-        // if intervalMsInput == nil && distanceFilterInput == nil {
-        //     trackingManager.startTracking(
-        //         enhancedBackgroundMode: backgroundMode
-        //     ) { [weak self] success, message in
-        //         self?.handleStartResult(success: success, message: message, result: result)
-        //     }
-        // } else {
-        //     // Use provided values or -1 as fallback
-        //     trackingManager.startTracking(
-        //         enhancedBackgroundMode: backgroundMode,
-        //         intervalMs: intervalMs,
-        //         distanceFilter: distanceFilter
-        //     ) { [weak self] success, message in
-        //         self?.handleStartResult(success: success, message: message, result: result)
-        //     }
-        // }
-
-        // Start tracking with parameters (use -1 for defaults if not provided)
-        trackingManager.startTracking(
-            enhancedBackgroundMode: backgroundMode,
-            intervalMs: intervalMs,
-            distanceFilter: distanceFilter
-        ) { [weak self] success, message in
-            self?.handleStartResult(success: success, message: message, result: result)
+        if intervalMsInput == nil && distanceFilterInput == nil {
+            trackingManager.startTracking(
+                enhancedBackgroundMode: backgroundMode
+            ) { [weak self] success, message in
+                self?.handleStartResult(success: success, message: message, result: result)
+            }
+        } else {
+            // Use provided values or -1 as fallback
+            trackingManager.startTracking(
+                enhancedBackgroundMode: backgroundMode,
+                intervalMs: intervalMs,
+                distanceFilter: distanceFilter
+            ) { [weak self] success, message in
+                self?.handleStartResult(success: success, message: message, result: result)
+            }
         }
     }
 
@@ -790,7 +781,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     }
 
     private func stopTracking(result: @escaping FlutterResult) {
-                    logSection("Stop Tracking SDK")
+        logSection("Stop Tracking SDK")
         guard isInitialized else {
             result(FlutterError(code: "SDK_NOT_INITIALIZED",
                               message: "VietmapTrackingSDK not initialized",
@@ -798,9 +789,9 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
 
-            nativeLog("🛑 stopTracking called")
-            trackingManager.stopTracking { [weak self] success, message in
-                self?.nativeLog("🏁 stopTracking result | success=\(success) message=\(message ?? "nil")")
+        nativeLog("🛑 stopTracking called")
+        trackingManager.stopTracking { [weak self] success, message in
+            self?.nativeLog("🏁 stopTracking result | success=\(success) message=\(message ?? "nil")")
             DispatchQueue.main.async {
                 if success {
                     result(true)
