@@ -579,7 +579,7 @@ class VietmapTrackingController with WidgetsBindingObserver {
   ///
   /// Call once after [configure] — before [startTracking].
   /// [policy] must be one of [FakeGpsPolicy] constants:
-  /// - [FakeGpsPolicy.skip] (default): silently ignore
+  /// - [FakeGpsPolicy.skip] (default): detect only; no warning/stop/upload
   /// - [FakeGpsPolicy.warn]: show local notification (debounced 30s)
   /// - [FakeGpsPolicy.stopTracking]: stop tracking on first detection
   /// - [FakeGpsPolicy.logToServer]: save to DB + upload with `X-Fake-GPS: true`

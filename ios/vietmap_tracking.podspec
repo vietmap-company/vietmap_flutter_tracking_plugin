@@ -25,7 +25,7 @@ Pod::Spec.new do |s|
   # Native SDK — uncomment the pinned version when the SDK is published with
   # a stable tag; leave unpinned for development builds that use a local path.
   # s.dependency 'VietmapTrackingSDK', '~> 1.1.6'
-  s.dependency 'VietmapTrackingSDK', '1.3.4'
+  s.dependency 'VietmapTrackingSDK', '1.3.5'
 
   s.platform = :ios, '12.0'
 

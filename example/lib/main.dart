@@ -583,6 +583,22 @@ class _FakeGpsCard extends StatelessWidget {
                   ),
               ],
             ),
+            const SizedBox(height: 12),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              const Text('Allow Mock Location:', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+              Transform.scale(
+                scale: 0.8,
+                child: Switch(
+                  value: p.allowMockLocation,
+                  onChanged: (v) => p.setAllowMockLocation(v),
+                  activeColor: Colors.purple,
+                ),
+              ),
+            ]),
+            const Text(
+              'If enabled, simulated locations will be processed as real points and bypass policies.',
+              style: TextStyle(fontSize: 11, color: Colors.purple),
+            ),
             const SizedBox(height: 6),
             Text(
               _policyDescription(p.fakeGpsPolicy),
@@ -1495,18 +1511,19 @@ class _TrackingPluginDemoPageState extends State<TrackingPluginDemoPage> {
 
   Future<void> _configure() async {
     try {
+      const trackingBaseUrl = 'https://staging.fleetwork.vn/api/v1';
       // 1. Configure tracking SDK
       await _plugin.configureTracking(
-        apiKey:  dotenv.env['VIETMAP_API_KEY'] ?? 'YOUR_API_KEY',
-        baseUrl: 'https://tracking.vietmap.vn',
+        apiKey: dotenv.env['key-stg'] ?? '',
+        baseUrl: trackingBaseUrl,
         authMode: useQueryParamAuth ? AuthMode.queryParam : AuthMode.header,
         autoUpload: true,
       );
 
       // 2. Configure speed-alert API (url defaults to Vietmap's endpoint)
       await _plugin.configureAlertAPI(
-        apiKey: dotenv.env['ALERT_API_KEY'] ?? 'YOUR_ALERT_KEY',
-        apiID:  dotenv.env['ALERT_API_ID']  ?? 'YOUR_ALERT_ID',
+        apiKey: dotenv.env['ALERT_API_KEY'] ?? '',
+        apiID: dotenv.env['ALERT_API_ID'] ?? '',
       );
 
       // 3. Optionally switch to zone-network-v2 endpoint

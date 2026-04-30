@@ -78,6 +78,7 @@ class TrackingProvider extends ChangeNotifier {
 
   // ── Fake GPS ──────────────────────────────────────────────────────
   String fakeGpsPolicy = FakeGpsPolicy.skip;
+  bool allowMockLocation = false;
   FakeGpsEvent? lastFakeGpsEvent;
   final List<FakeGpsEvent> fakeGpsHistory = [];
   StreamSubscription<FakeGpsEvent>? _fakeGpsSub;
@@ -151,8 +152,8 @@ class TrackingProvider extends ChangeNotifier {
     _logSection('Configure SDK');
     try {
       debugPrint('Provider: configure tracking SDK and alert API');
-      const trackingBaseUrl = 'https://dricon.fastmap.vn/api/v1';
-      final trackingApiKey = dotenv.env['kTrackingApiKey'] ?? '';
+      const trackingBaseUrl = 'https://staging.fleetwork.vn/api/v1';
+      final trackingApiKey = dotenv.env['key-stg'] ?? '';
 
       await _controller.configure(
         trackingApiKey,
@@ -167,8 +168,8 @@ class TrackingProvider extends ChangeNotifier {
       );
 
       await _controller.configureAlertAPI(
-        dotenv.env['kAlertApiKey'] ?? '',
-        dotenv.env['kAlertApiId'] ?? '',
+        dotenv.env['ALERT_API_KEY'] ?? '',
+        dotenv.env['ALERT_API_ID'] ?? '',
       );
     } catch (e) {
       initError = e.toString();
@@ -355,11 +356,11 @@ class TrackingProvider extends ChangeNotifier {
 
   LocationTrackingConfig get activeConfig {
     if (useCustomConfig) {
-      // Timer mode  → chỉ dùng interval, tắt distance filter (= 0)
-      // Distance mode → chỉ dùng distanceFilter, đặt interval rất lớn (= 0)
-      // Cả hai OFF   → dùng cả hai giá trị người dùng nhập
-      final int resolvedInterval = _trackingWithDistance ? 0 : customIntervalMs;
-      final double resolvedDistance = _trackingWithTimer ? 0.0 : customDistanceFilter;
+      // Timer mode  → chỉ dùng interval, null distance filter
+      // Distance mode → chỉ dùng distanceFilter, null interval
+      // Cả hai OFF   → dùng null cho cả hai (SDK defaults)
+      final int? resolvedInterval = _trackingWithDistance ? null : (_trackingWithTimer ? customIntervalMs : null);
+      final double? resolvedDistance = _trackingWithTimer ? null : (_trackingWithDistance ? customDistanceFilter : null);
 
       return LocationTrackingConfig(
         intervalMs: resolvedInterval,
@@ -371,11 +372,11 @@ class TrackingProvider extends ChangeNotifier {
         deviceId: deviceId,
         userId: effectiveUserId,
         vehicleId: 'vehicle_001',
+        allowMockLocation: allowMockLocation,
       );
     }
+    // Default mode: let SDK decide its own defaults for interval/distance
     return LocationTrackingConfig(
-      intervalMs: 5000,
-      distanceFilter: 10,
       accuracy: LocationAccuracy.high,
       backgroundMode: true,
       notificationTitle: 'GPS Tracking',
@@ -383,6 +384,7 @@ class TrackingProvider extends ChangeNotifier {
       deviceId: deviceId,
       userId: effectiveUserId,
       vehicleId: 'vehicle_001',
+      allowMockLocation: allowMockLocation,
     );
   }
 
@@ -596,6 +598,11 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setAllowMockLocation(bool v) {
+    allowMockLocation = v;
+    notifyListeners();
+  }
+
   /// Returns true if notification permission is already granted.
   /// Uses flutter_local_notifications on iOS (same UNUserNotificationCenter
   /// delegate that FLN registered), permission_handler on Android.
@@ -681,11 +688,11 @@ class TrackingProvider extends ChangeNotifier {
       _logSection('Start SLC');
       addSLCLog('📡 Starting SLC with deviceId: $deviceId...');
       await ch.invokeMethod('startSLC', {
-        'apiKey': dotenv.env['kTrackingApiKey'] ?? '',
+        'apiKey': dotenv.env['key-stg'] ?? '',
         'deviceId': deviceId,
         'vehicleId': 'vehicle_001',
         'userId': effectiveUserId,
-        'apiEndpoint': 'https://tracking.fleetwork.vn/api/v1/gps-tracking/history',
+        'apiEndpoint': 'https://staging.fleetwork.vn/api/v1/gps-tracking/history',
         'distanceFilter': 500.0,
       });
       slcEnabled = true;

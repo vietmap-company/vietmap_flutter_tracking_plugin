@@ -767,11 +767,12 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             try {
                 val args = call.arguments as? Map<*, *>
 
-                val intervalMs = (args?.get("intervalMs") as? Number)?.toLong() ?: 5000L
-                val distanceFilter = (args?.get("distanceFilter") as? Number)?.toDouble() ?: 10.0
+                val intervalMs = (args?.get("intervalMs") as? Number)?.toLong()
+                val distanceFilter = (args?.get("distanceFilter") as? Number)?.toDouble()
                 val backgroundMode = args?.get("backgroundMode") as? Boolean ?: true
                 val notificationTitle = args?.get("notificationTitle") as? String
                 val notificationMessage = args?.get("notificationMessage") as? String
+                val allowMockLocation = args?.get("allowMockLocation") as? Boolean ?: false
 
                 val deviceId = args?.get("deviceId") as? String
                 val userId = args?.get("userId") as? String
@@ -782,11 +783,39 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 this.userId = userId
                 this.vehicleId = vehicleId
 
-                Log.d("VietmapTrackingPlugin", "🚀 startTracking | interval=${intervalMs}ms distance=${distanceFilter}m bg=$backgroundMode")
+                Log.d("VietmapTrackingPlugin", "🚀 startTracking | interval=${intervalMs}ms distance=${distanceFilter}m bg=$backgroundMode mock=$allowMockLocation")
                 Log.d("VietmapTrackingPlugin", "🆔 device=$deviceId user=$userId vehicle=$vehicleId")
+
+                // Update configuration with allowMockLocation
+                try {
+                    // signature: (long intervalMs, double distanceFilter, boolean enableSpeedAlerts, 
+                    //             boolean allowMockLocation, double speedThreshold, String accuracy, 
+                    //             boolean enableBackgroundMode)
+                    // If intervalMs or distanceFilter are null, we don't call setTrackingConfig 
+                    // and let the SDK use its internal defaults.
+                    if (intervalMs != null && distanceFilter != null) {
+                        val config = TrackingConfig(
+                            intervalMs,
+                            distanceFilter,
+                            false,             // enableSpeedAlerts
+                            allowMockLocation,
+                            0.0,               // speedThreshold
+                            "high",            // accuracy
+                            backgroundMode
+                        )
+                        vietmapSDK.setTrackingConfig(config)
+                    } else {
+                        Log.d("VietmapTrackingPlugin", "ℹ️ Using SDK default tracking config (interval/distance not provided)")
+                        // Even if we don't set the full config, we might want to set the mock policy if the SDK allows it separately
+                        // For now based on TrackingConfig constructor 1.0.4, it's bundled.
+                    }
+                } catch (e: Exception) {
+                    Log.w("VietmapTrackingPlugin", "⚠️ setTrackingConfig(TrackingConfig) failed: ${e.message}")
+                }
 
                 // Set metadata — must happen before startTracking()
                 if (!vehicleId.isNullOrEmpty()) vietmapSDK.setVehicleId(vehicleId)
+                if (!userId.isNullOrEmpty()) vietmapSDK.setDriverId(userId)
                 if (!notificationTitle.isNullOrEmpty()) vietmapSDK.setNotificationTitle(notificationTitle)
                 if (!notificationMessage.isNullOrEmpty()) vietmapSDK.setNotificationText(notificationMessage)
 

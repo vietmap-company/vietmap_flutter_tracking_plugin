@@ -47,7 +47,7 @@ class FakeGpsEvent {
 class FakeGpsPolicy {
   FakeGpsPolicy._();
 
-  /// Silently ignore detected fake GPS locations. **Default.**
+  /// Detect fake GPS, but do not warn/stop/upload. **Default.**
   static const String skip = 'skip';
 
   /// Display a local notification warning the user (debounced 30s by native).

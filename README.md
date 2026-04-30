@@ -10,6 +10,8 @@ A Flutter plugin for GPS location tracking with VietmapTrackingSDK integration, 
 - **Background GPS Tracking** — Continuous location tracking with native VietmapTrackingSDK integration via foreground service (Android) and background location mode (iOS).
 - **VietmapTrackingSDK Integration** — Direct native SDK bridge on both platforms. No third-party location wrappers.
 - **Speed Alert System** — Real-time speed monitoring with configurable Alert API credentials.
+- **Offline Tracking & Cache Sync** — Automatically stores GPS points in local SQLite while offline and uploads in batches when network is available.
+- **Fake GPS Detection** — Native fake-location detection with configurable policies: skip, warn, stop tracking, or log to server.
 - **Cross-Platform** — Native implementations for both Android (API 21+) and iOS (11.0+).
 - **High Accuracy** — Configurable precision levels (`high`, `medium`, `low`) for different use cases.
 - **Battery Management** — Optimized tracking presets for balancing accuracy and power consumption.
@@ -34,14 +36,14 @@ A Flutter plugin for GPS location tracking with VietmapTrackingSDK integration, 
 
 | Platform | SDK | Version |
 |----------|-----|---------|
-| iOS      | VietmapTrackingSDK (CocoaPods) | 1.1.6 |
-| Android  | vietmap-tracking-sdk-android (JitPack) | 1.2.2 |
+| iOS      | VietmapTrackingSDK (CocoaPods) | 1.3.5 |
+| Android  | vietmap-tracking-sdk-android (Local) | 1.3.7 |
 
 ## Installation
 
 ```yaml
 dependencies:
-  vietmap_tracking_plugin: ^1.0.0
+  vietmap_tracking_plugin: ^1.1.0
 ```
 
 ```bash
@@ -61,6 +63,13 @@ Add the following permissions to your `ios/Runner/Info.plist`:
 <string>This app needs continuous location access to track your GPS location even when the app is in the background. This enables features like route tracking, delivery monitoring, and location-based services.</string>
 <key>NSLocationAlwaysUsageDescription</key>
 <string>This app needs background location access to provide continuous GPS tracking when the app is not actively in use.</string>
+```
+
+Add your Vietmap API key to `ios/Runner/Info.plist`:
+
+```xml
+<key>X-API-Key</key>
+<string>YOUR_VIETMAP_API_KEY</string>
 ```
 
 #### Background Modes Configuration
@@ -96,6 +105,7 @@ Add the following permissions to your `android/app/src/main/AndroidManifest.xml`
 
 ```xml
 <uses-permission android:name="android.permission.INTERNET" />
+```
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
@@ -204,16 +214,102 @@ Future<void> disableSpeedAlerts() async {
 }
 ```
 
+### Tracking Modes: SDK Defaults vs Custom
+
+The plugin supports optional `intervalMs` and `distanceFilter`. If omitted (null), the SDK will use its internal optimized defaults.
+
+| Mode | `intervalMs` | `distanceFilter` | Native SDK Behavior |
+|------|--------------|------------------|------------------|
+| SDK Defaults | `null` | `null` | Optimized internal defaults for reliability and battery. |
+| Timer-only | `> 0` | `null` (or 0) | Update on fixed timer even if stationary. |
+| Movement-only| `null` (or 0) | `> 0` | Update only after moving minimum distance. |
+| Hybrid | `> 0` | `> 0` | Update based on whichever trigger fires first. |
+
+```dart
+// Use SDK internal defaults (Recommended for most apps)
+final defaultConfig = LocationTrackingConfig(
+  backgroundMode: true,
+  allowMockLocation: false,
+);
+
+// Custom interval tracking
+final intervalConfig = LocationTrackingConfig(
+  intervalMs: 10000, // 10s
+  backgroundMode: true,
+);
+```
+
+### Mock Location Support
+
+You can now toggle whether to allow fake GPS or mock locations:
+
+```dart
+final config = LocationTrackingConfig(
+  allowMockLocation: true, // Allow user to use mock GPS (e.g., for testing)
+);
+```
+
+If set to `false` (default), the SDK will automatically block or skip fake location points.
+
+### Offline Tracking and Manual Cache Sync
+
+```dart
+final controller = VietmapTrackingController.instance;
+
+// Optional: disable auto upload and control sync manually
+await controller.setAutoUpload(false);
+
+// Check offline cache size
+final pending = await controller.getCachedLocationsCount();
+print('Pending cached locations: $pending');
+
+// Configure SQLite cache limits (optional)
+await controller.configureCacheLimits(
+  maxRecords: 5000,
+  maxDbSizeBytes: 50 * 1024 * 1024, // 50 MB
+  batchSize: 50,
+);
+
+// Trigger manual upload when needed
+final uploaded = await controller.uploadCachedLocationsManually();
+print('Manual cache upload: $uploaded');
+
+// Optional: clear cache
+await controller.clearCachedLocations();
+```
+
+### Fake GPS Detection
+
+Fake GPS detection is available by default, but the SDK stays in the `skip`
+policy unless you change it. In `skip` mode, the SDK only emits detection
+events for app logic; it does not warn, stop tracking, or upload fake records.
+To activate a response policy manually, call `setFakeGpsPolicy(...)` before
+`startTracking()`.
+
+```dart
+final controller = VietmapTrackingController.instance;
+
+// Manual activation: choose a policy other than skip
+await controller.setFakeGpsPolicy(FakeGpsPolicy.warn);
+
+controller.onFakeGpsDetected.listen((event) {
+  print('Fake GPS detected at ${event.lat}, ${event.lng}');
+  print('isFirstDetection: ${event.isFirstDetection}');
+});
+```
+
 ## Configuration Options
 
 ### LocationTrackingConfig
 
 ```dart
 LocationTrackingConfig({
-  /// Interval between location updates in milliseconds
+  /// Interval between location updates in milliseconds.
+  /// Set to 0 to prefer distance-based updates.
   required int intervalMs,
 
-  /// Minimum distance between location updates in meters
+  /// Minimum distance between location updates in meters.
+  /// Set to 0 to prefer interval-based updates.
   required double distanceFilter,
 
   /// Desired accuracy level: high, medium, low
@@ -232,7 +328,8 @@ LocationTrackingConfig({
 
 ### Tracking Presets
 
-Pre-configured tracking modes available as factory methods:
+Pre-configured tracking modes available as factory methods.
+These are hybrid defaults that tune both interval and distance for common use cases:
 
 ```dart
 // High accuracy for turn-by-turn navigation (3s interval, 5m filter)
@@ -452,6 +549,79 @@ Disable speed monitoring.
 
 ```dart
 final success = await controller.turnOffAlert();
+```
+
+### Offline Cache & Sync Methods
+
+#### `setAutoUpload(bool enabled)`
+
+Enable/disable automatic background upload of cached locations.
+
+```dart
+await controller.setAutoUpload(true);
+```
+
+#### `getCachedLocationsCount()`
+
+Returns number of cached GPS points waiting for upload.
+
+```dart
+final pending = await controller.getCachedLocationsCount();
+```
+
+#### `uploadCachedLocationsManually()`
+
+Manually uploads cached GPS points.
+
+```dart
+final ok = await controller.uploadCachedLocationsManually();
+```
+
+#### `clearCachedLocations()`
+
+Deletes all cached GPS points from local SQLite.
+
+```dart
+await controller.clearCachedLocations();
+```
+
+#### `configureCacheLimits({maxRecords, maxDbSizeBytes, batchSize})`
+
+Configures SQLite cache capacity and upload batch size.
+
+```dart
+await controller.configureCacheLimits(
+  maxRecords: 5000,
+  maxDbSizeBytes: 50 * 1024 * 1024,
+  batchSize: 50,
+);
+```
+
+### Fake GPS Methods
+
+#### `setFakeGpsPolicy(String policy)`
+
+Sets the fake GPS response policy before tracking starts.
+
+This is the manual activation method for the feature.
+
+- `FakeGpsPolicy.skip` (default): detect only, but do not warn/stop/upload
+- `FakeGpsPolicy.warn`: trigger warning notification (native debounce 30s)
+- `FakeGpsPolicy.stopTracking`: stop tracking on first detection
+- `FakeGpsPolicy.logToServer`: mark fake record and upload with `X-Fake-GPS: true`
+
+```dart
+await controller.setFakeGpsPolicy(FakeGpsPolicy.logToServer);
+```
+
+#### `onFakeGpsDetected`
+
+Stream of `FakeGpsEvent` emitted by native SDK.
+
+```dart
+controller.onFakeGpsDetected.listen((event) {
+  print(event);
+});
 ```
 
 ---
@@ -866,7 +1036,7 @@ flutter run -d android
 │        (Swift)        │        (Kotlin)           │
 ├───────────────────────┼──────────────────────────┤
 │  VietmapTrackingSDK   │  VietmapTrackingSDK       │
-│  iOS 1.1.6 CocoaPods  │  Android 1.2.2 JitPack   │
+│  iOS 1.3.4 CocoaPods  │  Android 1.3.4 JitPack   │
 └───────────────────────┴──────────────────────────┘
 ```
 
