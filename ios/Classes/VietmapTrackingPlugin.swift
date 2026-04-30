@@ -755,21 +755,14 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         }
 
         // Logic check: if both are nil, call SDK's default startTracking
-        if intervalMsInput == nil && distanceFilterInput == nil {
-            trackingManager.startTracking(
-                enhancedBackgroundMode: backgroundMode
-            ) { [weak self] success, message in
-                self?.handleStartResult(success: success, message: message, result: result)
-            }
-        } else {
-            // Use provided values or -1 as fallback
-            trackingManager.startTracking(
-                enhancedBackgroundMode: backgroundMode,
-                intervalMs: intervalMs,
-                distanceFilter: distanceFilter
-            ) { [weak self] success, message in
-                self?.handleStartResult(success: success, message: message, result: result)
-            }
+        // Note: iOS SDK 1.3.5 startTracking follows the same pattern as Android:
+        // parameters are optional, falling back to internal defaults.
+        trackingManager.startTracking(
+            enhancedBackgroundMode: backgroundMode,
+            intervalMs: intervalMs,
+            distanceFilter: distanceFilter
+        ) { [weak self] success, message in
+            self?.handleStartResult(success: success, message: message, result: result)
         }
     }
 
@@ -950,15 +943,21 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
         let args = call.arguments as? [String: Any]
-        let intervalMs = args?["intervalMs"] as? Int ?? 5000
-        let distanceFilter = args?["distanceFilter"] as? Double ?? 10.0
+        let intervalMsInput = args?["intervalMs"] as? Int
+        let distanceFilterInput = args?["distanceFilter"] as? Double
+
+        // Values for logging
+        let intervalMs = intervalMsInput ?? -1
+        let distanceFilter = distanceFilterInput ?? -1.0
 
         // Determine trigger mode
         let triggerMode: String
-        if intervalMs > 0 && distanceFilter <= 0 {
+        if let interval = intervalMsInput, interval > 0, (distanceFilterInput == nil || distanceFilterInput! <= 0) {
             triggerMode = "⏱ TIMER ONLY"
-        } else if distanceFilter > 0 && intervalMs <= 0 {
+        } else if let distance = distanceFilterInput, distance > 0, (intervalMsInput == nil || intervalMsInput! <= 0) {
             triggerMode = "📏 DISTANCE ONLY"
+        } else if intervalMsInput == nil && distanceFilterInput == nil {
+            triggerMode = "ℹ️ SDK DEFAULTS"
         } else {
             triggerMode = "⚠️ BOTH"
         }
@@ -988,8 +987,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             self.nativeLog("🔄 updateTrackingConfig: stopped, restarting with new config...")
             self.trackingManager.startTracking(
                 enhancedBackgroundMode: backgroundMode,
-                intervalMs: intervalMs,
-                distanceFilter: distanceFilter
+                intervalMs: intervalMsInput,
+                distanceFilter: distanceFilterInput
             ) { [weak self] success, message in
                 self?.nativeLog("✅ updateTrackingConfig restart | success=\(success) msg=\(message ?? "nil")")
                 self?.logCacheSnapshot("update-config/restart-callback")
