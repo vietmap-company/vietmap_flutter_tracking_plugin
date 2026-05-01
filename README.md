@@ -11,7 +11,7 @@ A Flutter plugin for GPS location tracking with VietmapTrackingSDK integration. 
 
 ```yaml
 dependencies:
-  vietmap_tracking_plugin: ^1.1.0
+  vietmap_tracking_plugin: ^1.0.3
 ```
 
 ```bash
@@ -233,8 +233,8 @@ plugin.onTtsText.listen((String text) => print('TTS: \$text'));
 
 | Platform | SDK | Version |
 |----------|-----|---------|
-| iOS | VietmapTrackingSDK (CocoaPods) | 1.3.5 |
-| Android | vietmap-tracking-sdk-android | 1.3.7 |
+| iOS | VietmapTrackingSDK (CocoaPods) | 1.3.10 |
+| Android | vietmap-tracking-sdk-android | 1.3.9 |
 
 ---
 
