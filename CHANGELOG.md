@@ -7,32 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.3] - 2026-04-30
+
+### Changed
+
+- **Battery optimization** — Improved battery efficiency by optimizing GPS tracking intervals and reducing background wakeups.
+
+### Fixed
+
+- **Bug fixes** — Various stability improvements and bug fixes.
+
+---
+
+## [1.0.2] - 2026-04-28
 
 ### Added
 
 - **Flutter wrapper API** — Added `VietmapTrackingPlugin` for `configureTracking`, `configureAlertAPI`, `configureZoneNetworkV2`, `resetZoneNetworkV2`, `startAlert`, `stopAlert`, and the new event streams.
 - **Auth mode toggle** — Example app/provider can now switch tracking auth between header and query parameter via a single code flag.
 - **Unit tests** — Added deterministic tests for the method channel routing and the new wrapper config methods.
-- **GPS payload contract v1.2** — Updated `LocationData` model to support new SDK payload format:
-  - `time` field (Unix milliseconds) instead of `timestamp`
-  - `lat`/`lng` rounded to 12 decimal places for higher precision
-  - `speed` converted to `int` and clamped to 0–32767 (m/s)
-  - `metaData` optional JSON object support
-  - Full backward compatibility with old payload format during read
-- **SDK migration guide** — Comprehensive documentation in `SDK_CONTRACT_UPDATE.md` covering payload contract changes, Flutter implementation steps, auth mode usage, network inspection tips, and troubleshooting.
+- **GPS payload contract v1.2** — Updated `LocationData` model to support new SDK payload format.
 
 ### Changed
 
 - **LocationData serialization** — `toJson()` now outputs GPS payload following new SDK contract (v1.2+) with `time`, int `speed`, and 12dp `lat`/`lng`.
 - **LocationData deserialization** — `fromJson()` accepts both old keys (`timestamp`, `latitude`, `longitude`, `bearing`) and new keys (`time`, `lat`, `lng`, `heading`) for backward compatibility.
-- **SLC example integration** — Temporarily disabled the iOS SLC demo/configuration path until the upgraded SDK exposes the final API.
 
 ### Fixed
 
 - **Test stability** — Removed `flutter_dotenv` dependency from unit-test key constants so tests can run without local `.env` files.
 - **Speed serialization** — Speed values now correctly converted to integer (0–32767) instead of float to match native SDK contract.
 - **Coordinate precision** — Latitude/longitude now rounded to 12 decimal places (~1.1mm precision) for consistency with SDK expectations.
+
+---
+
+## [1.0.1] - 2026-04-24
+
+### Change
+
+- Improve battery efficiency for devices by optimizing background tracking intervals and reducing wakeups.
+- Reduce unnecessary location requests when tracking is idle or paused.
+- Add offline tracking support to queue location events when the network is unavailable.
+- Retry queued uploads automatically when connectivity is restored.
+- Improve tracking stability when switching between foreground and background.
 
 ## [1.0.0] - 2026-02-27
 
