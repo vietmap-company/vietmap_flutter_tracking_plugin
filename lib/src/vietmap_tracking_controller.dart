@@ -88,6 +88,46 @@ class VietmapTrackingController with WidgetsBindingObserver {
     }
   }
 
+  /// Validate the tracking API key against the server and initialize the SDK.
+  ///
+  /// Calls GET {baseURL}/gps-tracking/users with the API key.
+  /// Throws [PlatformException] with code "INVALID_API_KEY" if the key is
+  /// rejected by the server. On success the SDK is initialized automatically.
+  ///
+  /// Must be called before [startTracking]. Can be called independently of
+  /// [configure].
+  Future<void> initializeTracking(
+    String apiKey, {
+    String? baseURL,
+  }) async {
+    _logSection('Initialize Tracking');
+    try {
+      debugPrint(
+        'initializeTracking | apiKey=${apiKey.isEmpty ? 'empty' : 'provided'} | baseURL=$baseURL',
+      );
+      await _platform.initializeTracking(apiKey, baseURL);
+      _isConfigured = true;
+    } finally {
+      _logSection('Initialize Tracking', end: true);
+    }
+  }
+
+  /// Attach arbitrary metadata to every GPS post under the "metadata" key.
+  ///
+  /// Call before [startTracking]. Can be updated at any time during tracking.
+  ///
+  /// Example:
+  /// ```dart
+  /// await controller.setMetadata({'tripId': 'TRIP_001', 'driverName': 'A'});
+  /// ```
+  Future<void> setMetadata(Map<String, dynamic> metadata) async {
+    try {
+      await _platform.setMetadata(metadata);
+    } catch (e) {
+      debugPrint('Failed to setMetadata: $e');
+    }
+  }
+
   /// Configure Alert API for speed monitoring
   Future<bool> configureAlertAPI(String apiKey, String apiID) async {
     if (!_isConfigured) {

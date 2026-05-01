@@ -318,6 +318,8 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         when (call.method) {
             // Configuration
             "configure" -> handleConfigure(call, result)
+            "initializeTracking" -> handleInitializeTracking(call, result)
+            "setMetadata" -> handleSetMetadata(call, result)
             "configureAlertAPI" -> handleConfigureAlertAPI(call, result)
 
             // Permissions
@@ -381,6 +383,57 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     // ============================================================
     // MARK: - Configuration Methods
     // ============================================================
+
+    /**
+     * initializeTracking(trackingApiKey, trackingBaseUrl)
+     *
+     * Validates the API key against GET {baseUrl}/gps-tracking/users.
+     * Returns success(null) on valid key; result.error("INVALID_API_KEY", ...) on rejection.
+     */
+    private fun handleInitializeTracking(call: MethodCall, result: Result) {
+        withSection("Initialize Tracking") {
+            val apiKey  = call.argument<String>("trackingApiKey") ?: ""
+            val baseUrl = call.argument<String>("trackingBaseUrl") ?: "https://live.fleetwork.vn/api/v1"
+
+            if (apiKey.isEmpty()) {
+                result.error("INVALID_ARGUMENTS", "trackingApiKey is required", null)
+                return
+            }
+
+            vietmapSDK.initializeWithValidation(apiKey, baseUrl, object : VietmapTrackingSDK.ValidationCallback {
+                override fun onSuccess() {
+                    this@VietmapTrackingPlugin.apiKey = apiKey
+                    this@VietmapTrackingPlugin.baseURL = baseUrl
+                    isInitialized = true
+                    setupSDKCallbacks()
+                    setupSyncLoggerRetention()
+                    result.success(null)
+                }
+
+                override fun onError(message: String?) {
+                    result.error("INVALID_API_KEY", message ?: "API key validation failed", null)
+                }
+            })
+        }
+    }
+
+    /**
+     * setMetadata(metadata: Map<String, Any>)
+     *
+     * Attaches arbitrary metadata to every GPS post under the "metadata" key.
+     */
+    private fun handleSetMetadata(call: MethodCall, result: Result) {
+        withSection("Set Metadata") {
+            try {
+                @Suppress("UNCHECKED_CAST")
+                val metadata = call.argument<Map<String, Any>>("metadata") ?: emptyMap()
+                vietmapSDK.setMetadata(metadata)
+                result.success(null)
+            } catch (e: Exception) {
+                result.error("SET_METADATA_FAILED", e.message, null)
+            }
+        }
+    }
 
     /**
      * configure(apiKey, baseURL?)

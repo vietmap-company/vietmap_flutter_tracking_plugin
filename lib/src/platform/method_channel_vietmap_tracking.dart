@@ -62,6 +62,25 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   }
 
   @override
+  Future<void> initializeTracking(String apiKey, String? baseURL) async {
+    // PlatformException with code INVALID_API_KEY propagates as-is to caller.
+    // Passing null lets the native SDK use its own default baseURL.
+    await _channel.invokeMethod<void>('initializeTracking', {
+      'trackingApiKey': apiKey,
+      if (baseURL != null && baseURL.isNotEmpty) 'trackingBaseUrl': baseURL,
+    });
+  }
+
+  @override
+  Future<void> setMetadata(Map<String, dynamic> metadata) async {
+    try {
+      await _channel.invokeMethod<void>('setMetadata', {'metadata': metadata});
+    } on PlatformException catch (e) {
+      throw Exception('Failed to setMetadata: \${e.message}');
+    }
+  }
+
+  @override
   Future<bool> configureAlertAPI(String apiKey, String apiID) async {
     try {
       final args = {

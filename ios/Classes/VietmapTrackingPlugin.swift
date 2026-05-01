@@ -214,6 +214,10 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             configureTracking(call, result: result)
         case "configure":
             configure(call, result: result)
+        case "initializeTracking":
+            initializeTracking(call, result: result)
+        case "setMetadata":
+            setMetadata(call, result: result)
         case "configureAlertAPI":
             configureAlertAPI(call, result: result)
         case "configureZoneNetworkV2":
@@ -486,6 +490,61 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
     // MARK: - configureTracking (new unified init method)
 
+    /// initializeTracking({trackingApiKey, trackingBaseUrl})
+    ///
+    /// Validates the API key by calling GET {baseUrl}/gps-tracking/users.
+    /// Returns nil on success; FlutterError("INVALID_API_KEY") on rejection.
+    private func initializeTracking(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let apiKey = args["trackingApiKey"] as? String, !apiKey.isEmpty else {
+            result(FlutterError(code: "INVALID_ARGUMENTS",
+                               message: "trackingApiKey is required",
+                               details: nil))
+            return
+        }
+        let baseURL = args["trackingBaseUrl"] as? String ?? "https://live.fleetwork.vn/api/v1"
+
+        logSection("Initialize Tracking")
+        nativeLog("🔑 initializeTracking | apiKey=\(apiKey.prefix(10))... baseURL=\(baseURL)")
+
+        trackingManager.initializeWithValidation(apiKey: apiKey, baseURL: baseURL) { [weak self] error in
+            guard let self = self else { return }
+            if let error = error {
+                let nsError = error as NSError
+                self.nativeLog("❌ initializeTracking failed: \(nsError.localizedDescription)")
+                result(FlutterError(code: "INVALID_API_KEY",
+                                   message: nsError.localizedDescription,
+                                   details: nil))
+            } else {
+                self.apiKey = apiKey
+                self.baseURL = baseURL
+                self.isInitialized = true
+                self.setupSyncLogger()
+                self.nativeLog("✅ initializeTracking success")
+                result(nil)
+            }
+            self.logSection("Initialize Tracking", end: true)
+        }
+    }
+
+    /// setMetadata({metadata: Map<String, Any>})
+    ///
+    /// Attaches arbitrary metadata to every GPS post under the "metadata" key.
+    private func setMetadata(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let metadata = args["metadata"] as? [String: Any] else {
+            result(FlutterError(code: "INVALID_ARGUMENTS",
+                               message: "metadata map is required",
+                               details: nil))
+            return
+        }
+        nativeLog("📎 setMetadata | keys=\(metadata.keys.sorted())")
+        trackingManager.setMetadata(metadata as NSDictionary)
+        result(nil)
+    }
+
+    // MARK: - configureTracking (new unified init method)
+
     /// configureTracking({apiKey, baseUrl?, authMode?, gpsTrackingEndpoint?,
     ///                     gpsBulkEndpoint?, autoUpload?})
     ///
@@ -705,9 +764,12 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let distanceFilterInput = args?["distanceFilter"] as? Double
         let allowMockLocation = args?["allowMockLocation"] as? Bool ?? false
         
-        // Internal default values for logging
+        // For logging only — -1 means "not set, SDK will use its default"
         let intervalMs = intervalMsInput ?? -1
         let distanceFilter = distanceFilterInput ?? -1.0
+        // For SDK call — nil means "use SDK default"
+        let sdkIntervalMs: NSNumber? = intervalMsInput.map { NSNumber(value: $0) }
+        let sdkDistanceFilter: NSNumber? = distanceFilterInput.map { NSNumber(value: $0) }
 
         let deviceId = args?["deviceId"] as? String
         let userId = args?["userId"] as? String
@@ -759,8 +821,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         // parameters are optional, falling back to internal defaults.
         trackingManager.startTracking(
             enhancedBackgroundMode: backgroundMode,
-            intervalMs: intervalMs,
-            distanceFilter: distanceFilter
+            intervalMs: sdkIntervalMs,
+            distanceFilter: sdkDistanceFilter
         ) { [weak self] success, message in
             self?.handleStartResult(success: success, message: message, result: result)
         }
@@ -987,8 +1049,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             self.nativeLog("🔄 updateTrackingConfig: stopped, restarting with new config...")
             self.trackingManager.startTracking(
                 enhancedBackgroundMode: backgroundMode,
-                intervalMs: intervalMsInput ?? 10000,
-                distanceFilter: distanceFilterInput ?? 0.0
+                intervalMs: intervalMsInput.map { NSNumber(value: $0) },
+                distanceFilter: distanceFilterInput.map { NSNumber(value: $0) }
             ) { [weak self] success, message in
                 self?.nativeLog("✅ updateTrackingConfig restart | success=\(success) msg=\(message ?? "nil")")
                 self?.logCacheSnapshot("update-config/restart-callback")

@@ -92,7 +92,8 @@ class VietmapTrackingPlugin :
             "configureTracking"      -> handleConfigureTracking(call, result)
             "configureZoneNetworkV2" -> handleConfigureZoneNetworkV2(call, result)
             "resetZoneNetworkV2"     -> handleResetZoneNetworkV2(result)
-            // All other calls → legacy plugin
+            // initializeTracking and all other calls → legacy plugin so that
+            // legacy.isInitialized is set correctly before startTracking is called.
             else                     -> legacy.onMethodCall(call, result)
         }
     }
@@ -132,6 +133,39 @@ class VietmapTrackingPlugin :
      * server configuration.  authMode is mapped from String → native enum
      * where the SDK supports it.
      */
+    /**
+     * initializeTracking({trackingApiKey, trackingBaseUrl?})
+     *
+     * Validates the API key against the server before initialising the SDK.
+     * If trackingBaseUrl is omitted or empty, the SDK default is used.
+     * Completes with true on success or throws INVALID_API_KEY on failure.
+     */
+    private fun handleInitializeTracking(call: MethodCall, result: Result) {
+        Log.d(tag, "=======Initialize Tracking (with validation)=======")
+        val apiKey  = call.argument<String>("trackingApiKey")
+        val baseUrl = call.argument<String>("trackingBaseUrl") // optional
+
+        if (apiKey.isNullOrEmpty()) {
+            result.error("INVALID_ARGUMENTS", "trackingApiKey is required", null)
+            return
+        }
+
+        val sdk = VietmapTrackingSDK.getInstance(context)
+        // Pass null when empty so SDK uses its default baseURL
+        val effectiveBaseUrl = if (baseUrl.isNullOrEmpty()) null else baseUrl
+
+        sdk.initializeWithValidation(apiKey, effectiveBaseUrl, object : VietmapTrackingSDK.ValidationCallback {
+            override fun onSuccess() {
+                Log.d(tag, "initializeTracking OK | apiKey=${apiKey.take(8)}…")
+                result.success(true)
+            }
+            override fun onError(message: String) {
+                Log.d(tag, "initializeTracking FAILED: $message")
+                result.error("INVALID_API_KEY", message, null)
+            }
+        })
+    }
+
     private fun handleConfigureTracking(call: MethodCall, result: Result) {
         Log.d(tag, "=======Configure Tracking=======")
         try {

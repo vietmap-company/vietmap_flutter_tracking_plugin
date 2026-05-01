@@ -77,6 +77,43 @@ class VietmapTrackingPlugin {
 
   // ── Configuration ─────────────────────────────────────────────────────────
 
+  /// Validate the tracking API key against the server and initialize the SDK.
+  ///
+  /// Calls GET {trackingBaseUrl}/gps-tracking/users with the API key.
+  /// Throws [PlatformException] with code "INVALID_API_KEY" if the key is
+  /// rejected. On success the SDK is initialized automatically.
+  ///
+  /// Must be called before [startTracking]. Can be called independently of
+  /// [configureTracking].
+  Future<void> initializeTracking({
+    required String trackingApiKey,
+    String trackingBaseUrl = 'https://live.fleetwork.vn/api/v1',
+  }) async {
+    await _method.invokeMethod<void>('initializeTracking', {
+      'trackingApiKey': trackingApiKey,
+      'trackingBaseUrl': trackingBaseUrl,
+    });
+  }
+
+  /// Attach arbitrary metadata to every GPS post under the "metadata" key.
+  ///
+  /// Call before [startTracking]. Can be updated at any time during tracking.
+  ///
+  /// Example:
+  /// ```dart
+  /// await VietmapTrackingPlugin.instance.setMetadata({
+  ///   'tripId': 'TRIP_001',
+  ///   'driverName': 'Nguyen Van A',
+  /// });
+  /// ```
+  Future<void> setMetadata(Map<String, dynamic> metadata) async {
+    try {
+      await _method.invokeMethod<void>('setMetadata', {'metadata': metadata});
+    } on PlatformException {
+      rethrow;
+    }
+  }
+
   /// Configure the tracking SDK.
   ///
   /// Must be called before any other method.

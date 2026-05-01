@@ -26,6 +26,8 @@ PODS:
     - Flutter
     - VietmapTrackingSDK (= 1.3.9)
   - VietmapTrackingSDK (1.3.9)
+    - VietmapTrackingSDK (= 1.3.9)
+  - VietmapTrackingSDK (1.3.9)
 
 DEPENDENCIES:
   - background_location_2 (from `.symlinks/plugins/background_location_2/ios`)
@@ -71,6 +73,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   vietmap_tracking_plugin:
     :path: ".symlinks/plugins/vietmap_tracking_plugin/ios"
+  VietmapTrackingSDK:
+    :path: "/Users/khiempg/Develop/map-sdk-tracking/ios"
 
 SPEC CHECKSUMS:
   background_location_2: 2c49acf3b57e9a907a5c7f7ceb41e64895a6d8bc

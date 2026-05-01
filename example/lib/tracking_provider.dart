@@ -3,13 +3,12 @@ import 'dart:io';
 import 'dart:math' show sqrt, asin;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:device_info_plus/device_info_plus.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
-import 'package:vietmap_tracking_plugin/vietmap_tracking.dart';
 
 const _kPrefEmail = 'user_email';
 
@@ -86,6 +85,8 @@ class TrackingProvider extends ChangeNotifier {
   // ── Initialization ────────────────────────────────────────────────
   bool _initialized = false;
   String? initError;
+  bool isSdkConfigured = false;
+  String _apiKey = '';
 
   // ── Internal subscriptions ────────────────────────────────────────
   StreamSubscription<LocationData>? _locationSub;
@@ -111,10 +112,6 @@ class TrackingProvider extends ChangeNotifier {
 
     await _loadSavedEmail();
     await _resolveDeviceId();
-    await _configureSdk();
-    if (_controller.isConfigured) {
-      _controller.registerLifecycleObserver();
-    }
     await _checkPermissions();
     await _checkTrackingStatus();
     _subscribeStreams();
@@ -148,33 +145,64 @@ class TrackingProvider extends ChangeNotifier {
     } catch (_) {}
   }
 
-  Future<void> _configureSdk() async {
+  /// Initialize and configure the SDK explicitly.
+  ///
+  /// Calls the following SDK methods in sequence:
+  ///   1. `initializeTracking(apiKey, baseURL)` — validates the API key
+  ///      server-side. Throws `PlatformException(code: 'INVALID_API_KEY')`
+  ///      if the key is rejected.
+  ///   2. `setMetadata({...})` — attaches user context to every GPS record
+  ///      uploaded (optional but recommended).
+  ///   3. `configureAlertAPI(key, id)` — configures speed alert API
+  ///      credentials (only called when both are provided).
+  Future<void> configureSdk(
+    String apiKey, {
+    String? baseURL,
+    String? alertApiKey,
+    String? alertApiId,
+  }) async {
     _logSection('Configure SDK');
     try {
-      debugPrint('Provider: configure tracking SDK and alert API');
-      const trackingBaseUrl = 'https://staging.fleetwork.vn/api/v1';
-      final trackingApiKey = dotenv.env['key-stg'] ?? '';
+      debugPrint('Provider: initializeTracking + setMetadata + configureAlertAPI');
 
-      await _controller.configure(
-        trackingApiKey,
-        baseURL: trackingBaseUrl,
+      // 1. Validate API key against server and initialize SDK.
+      //    Throws PlatformException(code: 'INVALID_API_KEY') if rejected.
+      await _controller.initializeTracking(
+        apiKey,
+        baseURL: baseURL,
       );
 
-      await VietmapTrackingPlugin.instance.configureTracking(
-        apiKey: trackingApiKey,
-        baseUrl: trackingBaseUrl,
-        authMode: useQueryParamAuth ? AuthMode.queryParam : AuthMode.header,
-        autoUpload: true,
-      );
+      // 2. Attach metadata to every GPS record uploaded (optional).
+      await _controller.setMetadata({
+        'userName': userEmail.isNotEmpty ? userEmail : 'anonymous',
+        'appVersion': '1.0.0',
+      });
 
-      await _controller.configureAlertAPI(
-        dotenv.env['ALERT_API_KEY'] ?? '',
-        dotenv.env['ALERT_API_ID'] ?? '',
-      );
+      // 3. Configure speed-alert API (optional — only when credentials provided).
+      if (alertApiKey != null && alertApiKey.isNotEmpty &&
+          alertApiId != null && alertApiId.isNotEmpty) {
+        await _controller.configureAlertAPI(alertApiKey, alertApiId);
+      }
+
+      _apiKey = apiKey;
+      isSdkConfigured = true;
+      initError = null;
+      _controller.registerLifecycleObserver();
+      notifyListeners();
+    } on PlatformException catch (e) {
+      if (e.code == 'INVALID_API_KEY') {
+        initError = 'API key không hợp lệ: ${e.message}';
+      } else {
+        initError = e.toString();
+      }
+      isSdkConfigured = false;
+      notifyListeners();
+      debugPrint('Failed to configure SDK: $initError');
     } catch (e) {
       initError = e.toString();
+      isSdkConfigured = false;
       notifyListeners();
-      debugPrint('Failed to configure SDK in provider: $e');
+      debugPrint('Failed to configure SDK: $e');
     } finally {
       _logSection('Configure SDK', end: true);
     }
@@ -688,7 +716,7 @@ class TrackingProvider extends ChangeNotifier {
       _logSection('Start SLC');
       addSLCLog('📡 Starting SLC with deviceId: $deviceId...');
       await ch.invokeMethod('startSLC', {
-        'apiKey': dotenv.env['key-stg'] ?? '',
+        'apiKey': _apiKey,
         'deviceId': deviceId,
         'vehicleId': 'vehicle_001',
         'userId': effectiveUserId,

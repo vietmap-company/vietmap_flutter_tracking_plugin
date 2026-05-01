@@ -21,6 +21,16 @@ abstract class VietmapTrackingPlatform extends PlatformInterface {
 
   // ── Configuration ────────────────────────────────────────────
   Future<bool> configure(String apiKey, String? baseURL);
+
+  /// Validate the tracking API key by calling GET {baseURL}/gps-tracking/users.
+  /// Throws [PlatformException] with code "INVALID_API_KEY" if the key is rejected.
+  /// On success the SDK is also initialized with the provided credentials.
+  Future<void> initializeTracking(String apiKey, String? baseURL);
+
+  /// Attach arbitrary metadata to every GPS post sent by the tracking SDK.
+  /// The [metadata] map is merged into the "metadata" field of each GPS payload.
+  Future<void> setMetadata(Map<String, dynamic> metadata);
+
   Future<bool> configureAlertAPI(String apiKey, String apiID);
   Future<bool> setAutoUpload(bool enabled);
 

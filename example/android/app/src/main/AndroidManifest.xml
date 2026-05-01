@@ -56,22 +56,6 @@
             android:foregroundServiceType="location"
             tools:replace="android:exported" />
             
-        <!-- Background Location Service (background_location_2) -->
-        <service
-            android:name="com.almoullim.background_locator_2.IsolateHolderService"
-            android:exported="false"
-            android:foregroundServiceType="location" />
-            
-        <!-- Boot receiver for auto-start -->
-        <receiver 
-            android:name="com.almoullim.background_locator_2.BootReceiver"
-            android:enabled="true"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.BOOT_COMPLETED" />
-            </intent-filter>
-        </receiver>
-        
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
