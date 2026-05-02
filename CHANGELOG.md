@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-05-02
+
+### Changed
+
+- **Fake GPS checking** — Added support for detecting and validating fake GPS usage during tracking flows.
+
+---
+
 ## [1.0.4] - 2026-05-02
 
 ### Changed
