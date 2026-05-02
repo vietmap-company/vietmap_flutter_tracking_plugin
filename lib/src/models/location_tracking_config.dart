@@ -30,7 +30,8 @@ class LocationTrackingConfig {
   /// API endpoint for sending tracking data
   final String? apiEndpoint;
 
-  /// Whether to allow mock/fake locations. If false (default), the SDK will block fake locations.
+  /// Whether to allow mock/fake locations. If true (default), fake GPS passes through.
+  /// Set to false and call [VietmapTrackingController.setFakeGpsPolicy] to enable detection.
   final bool allowMockLocation;
 
   const LocationTrackingConfig({
@@ -44,7 +45,7 @@ class LocationTrackingConfig {
     this.userId,
     this.vehicleId,
     this.apiEndpoint,
-    this.allowMockLocation = false,
+    this.allowMockLocation = true,
   });
 
   /// Convert to JSON for platform channel

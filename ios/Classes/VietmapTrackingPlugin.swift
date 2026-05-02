@@ -27,6 +27,12 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     // OS tự điều chỉnh tần suất GPS theo tốc độ/góc cua; tự tạm dừng GPS khi xe đỗ
     private var smartBatteryEnabled: Bool = false
 
+    // MARK: - Fake GPS Policy
+    // Stores the policy set by setFakeGpsPolicy ("allow" | "skip" | "warn" | "stopTracking" | "logToServer").
+    // Default "allow": fake GPS passes through. User opts into detection by calling setFakeGpsPolicy.
+    // startTracking only overrides this when allowMockLocation=true (forces "allow").
+    private var currentFakeGpsPolicy: String = "allow"
+
     // MARK: - VietmapTrackingSDK Integration
     private let trackingManager = VietmapTrackingManager.shared
 
@@ -795,9 +801,11 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         nativeLog("🆔 ids | deviceId=\(deviceId ?? "nil") userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
 
         // ── Fake GPS Toggle ──
-        let policy = allowMockLocation ? "allow" : "skip"
+        // If allowMockLocation=true: force "allow" (disable detection entirely).
+        // If allowMockLocation=false: respect the policy set by setFakeGpsPolicy (default "skip").
+        let policy = allowMockLocation ? "allow" : currentFakeGpsPolicy
         trackingManager.setFakeGPSPolicy(policy)
-        nativeLog("🕵️ [FakeGPS] allowMockLocation=\(allowMockLocation) -> force policy='\(policy)'")
+        nativeLog("🕵️ [FakeGPS] allowMockLocation=\(allowMockLocation) currentPolicy=\(currentFakeGpsPolicy) -> applied policy='\(policy)'")
 
         // ── iOS Battery Optimization via CoreLocation ──
         if let vid = vehicleId, !vid.isEmpty {
@@ -1155,7 +1163,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     private func setFakeGPSPolicy(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
         let args = call.arguments as? [String: Any]
         let policy = args?["policy"] as? String ?? "skip"
-        nativeLog("⚙️ setFakeGPSPolicy: \(policy)")
+        currentFakeGpsPolicy = policy
+        nativeLog("⚙️ setFakeGPSPolicy: \(policy) (stored; will apply on next startTracking if allowMockLocation=false)")
         trackingManager.setFakeGPSPolicy(policy)
         result(nil)
     }
