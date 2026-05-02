@@ -76,7 +76,7 @@ class LocationTrackingConfig {
       userId: json['userId'] as String?,
       vehicleId: json['vehicleId'] as String?,
       apiEndpoint: json['apiEndpoint'] as String?,
-      allowMockLocation: json['allowMockLocation'] as bool? ?? false,
+      allowMockLocation: json['allowMockLocation'] as bool? ?? true,
     );
   }
 

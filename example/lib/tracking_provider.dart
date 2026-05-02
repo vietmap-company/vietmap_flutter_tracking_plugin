@@ -77,7 +77,7 @@ class TrackingProvider extends ChangeNotifier {
 
   // ── Fake GPS ──────────────────────────────────────────────────────
   String fakeGpsPolicy = FakeGpsPolicy.skip;
-  bool allowMockLocation = false;
+  bool allowMockLocation = true;
   FakeGpsEvent? lastFakeGpsEvent;
   final List<FakeGpsEvent> fakeGpsHistory = [];
   StreamSubscription<FakeGpsEvent>? _fakeGpsSub;

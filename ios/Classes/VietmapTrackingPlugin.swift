@@ -28,10 +28,10 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     private var smartBatteryEnabled: Bool = false
 
     // MARK: - Fake GPS Policy
-    // Stores the policy set by setFakeGpsPolicy ("allow" | "skip" | "warn" | "stopTracking" | "logToServer").
-    // Default "allow": fake GPS passes through. User opts into detection by calling setFakeGpsPolicy.
-    // startTracking only overrides this when allowMockLocation=true (forces "allow").
-    private var currentFakeGpsPolicy: String = "allow"
+    // Stores the policy set by setFakeGpsPolicy ("skip" | "warn" | "stopTracking" | "logToServer").
+    // Default "skip": detect but do nothing. User opts into stricter policy by calling setFakeGpsPolicy.
+    // allowMockLocation=true → setAllowMockLocation(true) on SDK → fake GPS passes through entirely.
+    private var currentFakeGpsPolicy: String = "skip"
 
     // MARK: - VietmapTrackingSDK Integration
     private let trackingManager = VietmapTrackingManager.shared
@@ -768,7 +768,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let backgroundMode = args?["backgroundMode"] as? Bool ?? true
         let intervalMsInput = args?["intervalMs"] as? Int
         let distanceFilterInput = args?["distanceFilter"] as? Double
-        let allowMockLocation = args?["allowMockLocation"] as? Bool ?? false
+        let allowMockLocation = args?["allowMockLocation"] as? Bool ?? true
         
         // For logging only — -1 means "not set, SDK will use its default"
         let intervalMs = intervalMsInput ?? -1
@@ -801,11 +801,13 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         nativeLog("🆔 ids | deviceId=\(deviceId ?? "nil") userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
 
         // ── Fake GPS Toggle ──
-        // If allowMockLocation=true: force "allow" (disable detection entirely).
-        // If allowMockLocation=false: respect the policy set by setFakeGpsPolicy (default "skip").
-        let policy = allowMockLocation ? "allow" : currentFakeGpsPolicy
-        trackingManager.setFakeGPSPolicy(policy)
-        nativeLog("🕵️ [FakeGPS] allowMockLocation=\(allowMockLocation) currentPolicy=\(currentFakeGpsPolicy) -> applied policy='\(policy)'")
+        // allowMockLocation=true  → SDK lets fake GPS pass through (no detection).
+        // allowMockLocation=false → SDK detects fake GPS and applies currentFakeGpsPolicy.
+        trackingManager.setAllowMockLocation(allowMockLocation)
+        if !allowMockLocation {
+            trackingManager.setFakeGPSPolicy(currentFakeGpsPolicy)
+        }
+        nativeLog("🕵️ [FakeGPS] allowMockLocation=\(allowMockLocation) policy='\(allowMockLocation ? "n/a (pass-through)" : currentFakeGpsPolicy)'")
 
         // ── iOS Battery Optimization via CoreLocation ──
         if let vid = vehicleId, !vid.isEmpty {
@@ -1164,7 +1166,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let args = call.arguments as? [String: Any]
         let policy = args?["policy"] as? String ?? "skip"
         currentFakeGpsPolicy = policy
-        nativeLog("⚙️ setFakeGPSPolicy: \(policy) (stored; will apply on next startTracking if allowMockLocation=false)")
+        nativeLog("⚙️ setFakeGPSPolicy: \(policy) (stored and applied to SDK immediately)")
         trackingManager.setFakeGPSPolicy(policy)
         result(nil)
     }
