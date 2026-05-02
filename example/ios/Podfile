@@ -32,7 +32,7 @@ target 'Runner' do
   use_frameworks!
 
   # Use CocoaPods published VietmapTrackingSDK (not local path)
-  pod 'VietmapTrackingSDK', '1.3.9'
+  pod 'VietmapTrackingSDK', '1.4.0'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do
