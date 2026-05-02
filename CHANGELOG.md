@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-05-02
+
+### Changed
+
+- **Battery optimization** — Further optimized tracking behavior to reduce power consumption on devices while maintaining stable location updates.
+
+---
+
 ## [1.0.3] - 2026-04-30
 
 ### Changed
