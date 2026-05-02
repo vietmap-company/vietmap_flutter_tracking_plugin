@@ -22,8 +22,7 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
 
   // Broadcast controller for native→Dart fake GPS events.
   // Native sends via channel.invokeMethod("onFakeGPSDetected", payload).
-  static final _fakeGpsController =
-      StreamController<FakeGpsEvent>.broadcast();
+  static final _fakeGpsController = StreamController<FakeGpsEvent>.broadcast();
 
   // Set up MethodChannel handler for native→Dart calls (e.g. onFakeGPSDetected).
   // Must be called once; subsequent calls override the previous handler.
@@ -50,10 +49,7 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   @override
   Future<bool> configure(String apiKey, String? baseURL) async {
     try {
-      final args = {
-        'apiKey': apiKey,
-        'baseURL': baseURL,
-      };
+      final args = {'apiKey': apiKey, 'baseURL': baseURL};
       final result = await _channel.invokeMethod<bool>('configure', args);
       return result ?? false;
     } on PlatformException catch (e) {
@@ -76,18 +72,18 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
     try {
       await _channel.invokeMethod<void>('setMetadata', {'metadata': metadata});
     } on PlatformException catch (e) {
-      throw Exception('Failed to setMetadata: \${e.message}');
+      throw Exception('Failed to setMetadata: ${e.message}');
     }
   }
 
   @override
   Future<bool> configureAlertAPI(String apiKey, String apiID) async {
     try {
-      final args = {
-        'apiKey': apiKey,
-        'apiID': apiID,
-      };
-      final result = await _channel.invokeMethod<bool>('configureAlertAPI', args);
+      final args = {'apiKey': apiKey, 'apiID': apiID};
+      final result = await _channel.invokeMethod<bool>(
+        'configureAlertAPI',
+        args,
+      );
       return result ?? false;
     } on PlatformException catch (e) {
       throw Exception('Failed to configure Alert API: ${e.message}');
@@ -98,10 +94,7 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   Future<bool> setAutoUpload(bool enabled) async {
     try {
       final args = {'enabled': enabled};
-      final result = await _channel.invokeMethod<bool>(
-        'setAutoUpload',
-        args,
-      );
+      final result = await _channel.invokeMethod<bool>('setAutoUpload', args);
       return result ?? false;
     } on PlatformException catch (e) {
       throw Exception('Failed to setAutoUpload: ${e.message}');
@@ -130,10 +123,7 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   Future<bool> setVehicleId(String vehicleId) async {
     try {
       final args = {'vehicleId': vehicleId};
-      final result = await _channel.invokeMethod<bool>(
-        'setVehicleId',
-        args,
-      );
+      final result = await _channel.invokeMethod<bool>('setVehicleId', args);
       return result ?? false;
     } on PlatformException catch (e) {
       throw Exception('Failed to setVehicleId: ${e.message}');
@@ -144,10 +134,7 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   Future<bool> setDriverId(String driverId) async {
     try {
       final args = {'driverId': driverId};
-      final result = await _channel.invokeMethod<bool>(
-        'setDriverId',
-        args,
-      );
+      final result = await _channel.invokeMethod<bool>('setDriverId', args);
       return result ?? false;
     } on PlatformException catch (e) {
       throw Exception('Failed to setDriverId: ${e.message}');
@@ -222,10 +209,7 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   Future<bool> startTracking(LocationTrackingConfig config) async {
     try {
       final args = config.toJson();
-      final result = await _channel.invokeMethod<bool>(
-        'startTracking',
-        args,
-      );
+      final result = await _channel.invokeMethod<bool>('startTracking', args);
       return result ?? false;
     } on PlatformException catch (e) {
       throw Exception('Failed to start tracking: ${e.message}');
@@ -391,7 +375,10 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
         'weight': weight,
         if (maxProvision != null) 'maxProvision': maxProvision,
       };
-      final result = await _channel.invokeMethod<bool>('configureVehicle', args);
+      final result = await _channel.invokeMethod<bool>(
+        'configureVehicle',
+        args,
+      );
       return result ?? false;
     } on PlatformException catch (e) {
       throw Exception('Failed to configureVehicle: ${e.message}');
@@ -488,7 +475,10 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
         'maxDbSizeBytes': maxDbSizeBytes,
         'batchSize': batchSize,
       };
-      final result = await _channel.invokeMethod<bool>('configureCacheLimits', args);
+      final result = await _channel.invokeMethod<bool>(
+        'configureCacheLimits',
+        args,
+      );
       return result ?? false;
     } on PlatformException catch (e) {
       throw Exception('Failed to configureCacheLimits: ${e.message}');
