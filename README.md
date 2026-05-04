@@ -11,7 +11,7 @@ A Flutter plugin for GPS location tracking with VietmapTrackingSDK integration. 
 
 ```yaml
 dependencies:
-  vietmap_tracking_plugin: ^1.0.3
+  vietmap_tracking_plugin: ^1.0.6
 ```
 
 ```bash
@@ -84,12 +84,14 @@ allprojects {
 ### 4. CocoaPods (`ios/Podfile`)
 
 ```ruby
-platform :ios, '11.0'
+platform :ios, '15.0'
 ```
 
 ```bash
 cd ios && pod install
 ```
+
+> **Note:** On first install run `pod install --repo-update` to ensure `VietmapTrackingSDK` is resolved from the latest spec repo.
 
 ---
 
@@ -132,6 +134,8 @@ Future<void> initSdk() async {
 
 ### 2. Request Permissions
 
+> **Warning (Android 10+):** Always complete Step 1 and verify `result.granted` before calling `requestAlwaysLocationPermissions`. Skipping Step 1 will silently fail on Android 10+.
+
 ```dart
 final result = await controller.requestLocationPermissions();
 if (!result.granted) return;
@@ -145,7 +149,7 @@ await controller.requestAlwaysLocationPermissions();
 ```dart
 await controller.startTracking(
   LocationTrackingConfig(
-    intervalMs: 5000,
+    intervalMs: 10000,
     distanceFilter: 10.0,
     accuracy: LocationAccuracy.high,
     backgroundMode: true,
@@ -160,6 +164,8 @@ Or use a preset:
 ```dart
 await controller.startTracking(TrackingPresets.navigation());
 ```
+
+> **Important:** To pass identifiers (e.g. `userId`, `vehicleId`) with a preset, use `copyWith()`. Do **not** use `setDriverId()` / `setVehicleId()` for initial setup — those methods update identifiers during an already-active tracking session.
 
 ### 4. Listen for Updates
 
@@ -226,7 +232,7 @@ plugin.onTtsText.listen((String text) => print('TTS: \$text'));
 |---|---|
 | Flutter | 3.3.0+ |
 | Dart | 3.8.0+ |
-| iOS | 11.0 (iOS 13+ recommended) |
+| iOS | 15.0+ |
 | Android | API 21 (Android 5.0) |
 
 **Native SDKs**
@@ -331,6 +337,8 @@ Attaches metadata to every GPS record uploaded. Call after `initializeTracking`,
 ```dart
 await controller.setMetadata({'userId': 'u-123', 'vehicleId': 'v-001'});
 ```
+
+> Metadata is merged into the `metadata` field of every GPS record server-side. Keys are arbitrary strings; values must be JSON-serialisable.
 
 #### `configureAlertAPI(String apiKey, String apiID)`
 
@@ -615,7 +623,14 @@ cd example && flutter test integration_test/
 
 **pod install fails**
 - Run `pod repo update` then `pod install`.
-- `Podfile` must specify `platform :ios, '11.0'` or higher.
+- `Podfile` must specify `platform :ios, '15.0'` or higher.
+
+**`FileSystemException: Failed to decode data using encoding 'utf-8'`**
+- Occurs when the project lives on a non-APFS volume (e.g. ExFAT). macOS creates `._*` resource-fork files that CocoaPods reads as text.
+- Add this inside your `post_install` block in `ios/Podfile`:
+```ruby
+Dir.glob(File.join(installer.sandbox.root, '**', '._*')).each { |f| FileUtils.rm_f(f) }
+```
 
 ---
 

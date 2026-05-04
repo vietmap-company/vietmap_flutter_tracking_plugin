@@ -403,12 +403,8 @@ class TrackingProvider extends ChangeNotifier {
         allowMockLocation: allowMockLocation,
       );
     }
-    // Default mode: let SDK decide its own defaults for interval/distance
-    return LocationTrackingConfig(
-      accuracy: LocationAccuracy.high,
-      backgroundMode: true,
-      notificationTitle: 'GPS Tracking',
-      notificationMessage: 'Your location is being tracked',
+    // Default mode: use general preset (10s / 15m, balanced battery/accuracy)
+    return TrackingPresets.general().copyWith(
       deviceId: deviceId,
       userId: effectiveUserId,
       vehicleId: 'vehicle_001',

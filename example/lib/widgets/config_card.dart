@@ -101,7 +101,7 @@ class ConfigCard extends StatelessWidget {
               child: Text(
                 () {
                   if (!p.useCustomConfig)
-                    return 'Config: Preset | 5000ms | 10m | bg: ✅ | user: ${p.effectiveUserId}';
+                    return 'Config: General preset | 10000ms | 15m | bg: ✅ | user: ${p.effectiveUserId}';
                   final mode = p.trackingWithTimer
                       ? '⏱ Timer only'
                       : p.trackingWithDistance

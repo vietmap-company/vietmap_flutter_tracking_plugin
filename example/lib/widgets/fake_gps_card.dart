@@ -145,8 +145,9 @@ class FakeGpsCard extends StatelessWidget {
                         )),
                     selected: p.fakeGpsPolicy == pol.value,
                     selectedColor: pol.color,
-                    onSelected: (_) =>
-                        _selectPolicy(context, p, pol.value),
+                    onSelected: p.useCustomConfig
+                        ? (_) => _selectPolicy(context, p, pol.value)
+                        : null,
                   ),
               ],
             ),
@@ -171,12 +172,37 @@ class FakeGpsCard extends StatelessWidget {
               style: TextStyle(fontSize: 11, color: Colors.purple),
             ),
             const SizedBox(height: 6),
-            Text(
-              _policyDescription(p.fakeGpsPolicy),
-              style: const TextStyle(fontSize: 11, color: Colors.blueGrey),
-            ),
-
-            // ─ Detection history ────────────────────────────────────────
+            if (!p.useCustomConfig)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: const Text(
+                  '⚠️ Fake GPS settings chỉ khả dụng ở Custom Config mode. Bật "Use Custom Config" để cấu hình.',
+                  style: TextStyle(fontSize: 11, color: Colors.orange),
+                ),
+              ),
+            const SizedBox(height: 12),
+            Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Allow Mock Location:',
+                      style: TextStyle(
+                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  Transform.scale(
+                    scale: 0.8,
+                    child: Switch(
+                      value: p.allowMockLocation,
+                      onChanged: p.useCustomConfig
+                          ? (v) => p.setAllowMockLocation(v)
+                          : null,
+                      activeColor: Colors.purple,
+                    ),
+                  ),
+                ]),
             if (p.fakeGpsHistory.isNotEmpty) ...[
               const SizedBox(height: 10),
               const Text('History (latest 20):',
