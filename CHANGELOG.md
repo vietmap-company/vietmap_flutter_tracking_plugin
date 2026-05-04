@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.6] - 2026-05-04
+
+### Changed
+
+- **Default tracking config** — Default mode now uses `TrackingPresets.general()` (10s interval / 15m distance) for consistent and predictable behaviour across devices.
+- **Fake GPS UI** — Policy controls and Allow Mock toggle are disabled when using default config mode to prevent accidental misconfiguration.
+- **iOS minimum deployment target** — Updated to iOS 15.0 to align with VietmapTrackingSDK requirements.
+
+---
+
 ## [1.0.5] - 2026-05-02
 
 ### Changed
