@@ -77,9 +77,8 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
       // Initialize SDK automatically — replace 'your-api-key' with your key.
       // Contact Vietmap to get an API key.
       await p.configureSdk(
-        //'943e44ad84e91c34f780f28f7c084c53cd4ddff1361b01a7', // Required: replace with your actual API key
-        '897f2377cc9b557c5356dea337a158b69505ff0a051dc2e7',
-        baseURL: 'https://staging.fleetwork.vn/api/v1', // Optional: only if using a custom server
+        'your-api-key',
+        baseURL: 'your-server/api/v1', // Optional: only if using a custom server
       );
       _emailController.text = p.userEmail;
       // SLC hooks are temporarily disabled.
