@@ -79,6 +79,9 @@ class VietmapTrackingController with WidgetsBindingObserver {
       );
       final result = await _platform.configure(apiKey, baseURL);
       _isConfigured = result;
+      if (result) {
+        unawaited(SmartBatteryManager.instance.prefetchBattery());
+      }
       return result;
     } catch (e) {
       debugPrint('Failed to configure VietmapTrackingSDK: $e');
@@ -411,18 +414,17 @@ class VietmapTrackingController with WidgetsBindingObserver {
 
   Future<List<GpsLocation>> getTrackingHistory({
     required String userId,
-    required int fromTimestamp,
-    required int toTimestamp,
+    int? fromTimestamp,
+    int? toTimestamp,
     int pageNumber = 1,
     int pageSize = 100,
-    String sortBy = 'timestamp',
     bool sortDescending = false,
   }) async {
     _requireConfigured();
     _logSection('Get Tracking History');
     try {
       debugPrint(
-        'userId=$userId from=$fromTimestamp to=$toTimestamp page=$pageNumber size=$pageSize sortBy=$sortBy sortDescending=$sortDescending',
+        'userId=$userId from=$fromTimestamp to=$toTimestamp page=$pageNumber size=$pageSize sortDescending=$sortDescending',
       );
       final rawJson = await _platform.getTrackingHistory(
         userId: userId,
@@ -430,7 +432,6 @@ class VietmapTrackingController with WidgetsBindingObserver {
         toTime: toTimestamp,
         pageNumber: pageNumber,
         pageSize: pageSize,
-        sortBy: sortBy,
         sortDescending: sortDescending,
       );
 
@@ -665,6 +666,8 @@ class VietmapTrackingController with WidgetsBindingObserver {
 
     final map = Map<String, dynamic>.from(node);
     const listKeys = [
+      'trackingData',
+      'TrackingData',
       'data',
       'Data',
       'items',

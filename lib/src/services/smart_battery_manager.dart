@@ -81,6 +81,7 @@ class SmartBatteryManager {
 
   int _lastBatteryLevel = 100;
   bool _isCharging = false;
+  DateTime? _lastBatteryFetchTime;
 
   // Biến phát hiện xe đứng yên qua speed của GPS points
   int _stationarySeconds = 0;
@@ -100,6 +101,24 @@ class SmartBatteryManager {
   Stream<SmartBatteryProfile> get onProfileChanged => _profileController.stream;
 
   // ── Public API ────────────────────────────────────────────────────────────
+
+  /// Đọc trước mức pin ngay sau khi SDK configure() — không cần bật tracking.
+  ///
+  /// Gọi trong [VietmapTrackingController.configure] để khi [enable] được gọi
+  /// sau [startTracking], pin đã biết → bỏ qua hoàn toàn delay khởi động.
+  Future<void> prefetchBattery() async {
+    try {
+      _lastBatteryLevel = await _battery.batteryLevel;
+      final state = await _battery.batteryState;
+      _isCharging = state == BatteryState.charging || state == BatteryState.full;
+      _lastBatteryFetchTime = DateTime.now();
+      debugPrint(
+        '🔋 [SmartBattery] prefetch | level=$_lastBatteryLevel% charging=$_isCharging',
+      );
+    } catch (e) {
+      debugPrint('🔋 [SmartBattery] prefetchBattery failed: $e');
+    }
+  }
 
   /// Cập nhật [preferredMovingProfile] và áp dụng ngay nếu SmartBattery đang chạy.
   ///
@@ -126,19 +145,11 @@ class SmartBatteryManager {
     debugPrint('🔋 [SmartBattery] Enabled | preferredMoving=$preferredMoving');
 
     // Lắng nghe sự kiện pin do OS phát ra (charge/discharge/full).
-    // Mỗi khi state thay đổi sẽ đọc lại batteryLevel một lần.
-    // Không dùng timer poll định kỳ — tránh bất kỳ can thiệp nào
-    // vào Foreground Service lifecycle trong giai đoạn khởi động.
     _batteryStateSub = _battery.onBatteryStateChanged.listen(_onBatteryStateChanged);
 
-    // ── Delay an toàn 6s trước khi đọc pin lần đầu và apply config ──
-    // Android Foreground Service yêu cầu startForeground() trong 5s.
-    // Không thực hiện bất kỳ MethodChannel call nào trước mốc này.
-    await Future.delayed(const Duration(milliseconds: 6000));
-    if (!_enabled) return; // bị disable() trong lúc chờ
-
-    // Đọc mức pin lần đầu sau khi service đã fully started
-    // _checkBatteryLevel() sẽ tự gọi _applyBestProfile() nếu cần
+    // Đọc pin ngay — configure() đã gọi prefetchBattery() trước nên thường
+    // đã có giá trị sẵn. Không cần delay vì safeUpdateTrackingConfig trên
+    // Android chỉ re-register FLP, không restart FGS.
     await _checkBatteryLevel();
   }
 

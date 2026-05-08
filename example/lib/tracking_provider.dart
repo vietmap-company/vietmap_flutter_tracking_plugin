@@ -93,6 +93,15 @@ class TrackingProvider extends ChangeNotifier {
   StreamSubscription<TrackingStatus>? _statusSub;
   StreamSubscription<SmartBatteryProfile>? _batterySub;
 
+  // ── Server History ────────────────────────────────────────────────
+  List<GpsLocation> serverHistory = [];
+  bool isFetchingHistory = false;
+  bool isFetchingMoreHistory = false;
+  bool hasMoreHistory = true;
+  String? historyFetchError;
+  int _historyPage = 1;
+  static const int _historyPageSize = 50;
+
   // ── Cache auto-refresh: throttle to once per 2s ───────────────────
   DateTime? _lastCacheRefresh;
 
@@ -129,6 +138,13 @@ class TrackingProvider extends ChangeNotifier {
     userEmail = email.trim();
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_kPrefEmail, userEmail);
+    if (isSdkConfigured) {
+      await _controller.setMetadata({
+        'userName': userEmail.isNotEmpty ? userEmail : 'anonymous',
+        'appVersion': '1.0.0',
+        'device-id': deviceId,
+      });
+    }
     notifyListeners();
   }
 
@@ -176,6 +192,7 @@ class TrackingProvider extends ChangeNotifier {
       await _controller.setMetadata({
         'userName': userEmail.isNotEmpty ? userEmail : 'anonymous',
         'appVersion': '1.0.0',
+        'device-id': deviceId,
       });
 
       // 3. Configure speed-alert API (optional — only when credentials provided).
@@ -397,17 +414,13 @@ class TrackingProvider extends ChangeNotifier {
         backgroundMode: customBackgroundMode,
         notificationTitle: 'GPS Tracking',
         notificationMessage: 'Your location is being tracked',
-        deviceId: deviceId,
         userId: effectiveUserId,
-        vehicleId: 'vehicle_001',
         allowMockLocation: allowMockLocation,
       );
     }
     // Default mode: use general preset (10s / 15m, balanced battery/accuracy)
     return TrackingPresets.general().copyWith(
-      deviceId: deviceId,
       userId: effectiveUserId,
-      vehicleId: 'vehicle_001',
       allowMockLocation: allowMockLocation,
     );
   }
@@ -518,6 +531,57 @@ class TrackingProvider extends ChangeNotifier {
     averageSpeed = 0.0;
     if (!isTracking) sessionStartTime = null;
     notifyListeners();
+  }
+
+  /// Reset and fetch page 1 (dùng cho auto-refresh 20s hoặc fetch lần đầu).
+  Future<void> fetchServerHistory() async {
+    if (!isSdkConfigured) return;
+    if (isFetchingHistory) return;
+    _historyPage = 1;
+    isFetchingHistory = true;
+    historyFetchError = null;
+    hasMoreHistory = true;
+    notifyListeners();
+    try {
+      final results = await _controller.getTrackingHistory(
+        userId: effectiveUserId,
+        pageNumber: 1,
+        pageSize: _historyPageSize,
+        sortDescending: true,
+      );
+      serverHistory = results;
+      hasMoreHistory = results.length >= _historyPageSize;
+    } catch (e) {
+      historyFetchError = e.toString();
+    } finally {
+      isFetchingHistory = false;
+      notifyListeners();
+    }
+  }
+
+  /// Append next page (gọi khi scroll tới cuối list).
+  Future<void> fetchMoreServerHistory() async {
+    if (!isSdkConfigured) return;
+    if (isFetchingMoreHistory || isFetchingHistory || !hasMoreHistory) return;
+    isFetchingMoreHistory = true;
+    notifyListeners();
+    try {
+      _historyPage++;
+      final results = await _controller.getTrackingHistory(
+        userId: effectiveUserId,
+        pageNumber: _historyPage,
+        pageSize: _historyPageSize,
+        sortDescending: true,
+      );
+      serverHistory = [...serverHistory, ...results];
+      hasMoreHistory = results.length >= _historyPageSize;
+    } catch (e) {
+      historyFetchError = e.toString();
+      _historyPage--; // rollback so retry is possible
+    } finally {
+      isFetchingMoreHistory = false;
+      notifyListeners();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────

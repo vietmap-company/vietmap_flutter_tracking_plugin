@@ -22,10 +22,10 @@ PODS:
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
-  - vietmap_tracking_plugin (1.0.3):
+  - vietmap_tracking_plugin (1.0.6):
     - Flutter
-    - VietmapTrackingSDK (= 1.4.0)
-  - VietmapTrackingSDK (1.4.0)
+    - VietmapTrackingSDK (= 1.4.1)
+  - VietmapTrackingSDK (1.4.1)
 
 DEPENDENCIES:
   - background_location_2 (from `.symlinks/plugins/background_location_2/ios`)
@@ -40,7 +40,7 @@ DEPENDENCIES:
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - vietmap_tracking_plugin (from `.symlinks/plugins/vietmap_tracking_plugin/ios`)
-  - VietmapTrackingSDK (= 1.4.0)
+  - VietmapTrackingSDK (= 1.4.1)
 
 SPEC REPOS:
   https://github.com/CocoaPods/Specs.git:
@@ -73,20 +73,20 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/vietmap_tracking_plugin/ios"
 
 SPEC CHECKSUMS:
-  background_location_2: 2c49acf3b57e9a907a5c7f7ceb41e64895a6d8bc
-  battery_plus: 34f72fa2afeeea83bbae306c72a25828d3ec727a
-  connectivity_plus: 2a701ffec2c0ae28a48cf7540e279787e77c447d
-  device_info_plus: bf2e3232933866d73fe290f2942f2156cdd10342
+  background_location_2: 738e207c87ea5ee183a4e234d5766be4cdb019a7
+  battery_plus: b42253f6d2dde71712f8c36fef456d99121c5977
+  connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
+  device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
-  flutter_background_service_ios: e30e0d3ee69e4cee66272d0c78eacd48c2e94aac
-  flutter_local_notifications: ff50f8405aaa0ccdc7dcfb9022ca192e8ad9688f
-  geolocator_apple: 66b711889fd333205763b83c9dcf0a57a28c7afd
-  integration_test: 252f60fa39af5e17c3aa9899d35d908a0721b573
-  permission_handler_apple: 9878588469a2b0d0fc1e048d9f43605f92e6cec2
-  shared_preferences_foundation: fcdcbc04712aee1108ac7fda236f363274528f78
-  vietmap_tracking_plugin: 571a1c12d0b8f1d95967364fe2c7d94a3db10b9e
-  VietmapTrackingSDK: 80ad46bad7263db80dd53a5b8c64e0d955325a19
+  flutter_background_service_ios: 00d31bdff7b4bfe06d32375df358abe0329cf87e
+  flutter_local_notifications: a5a732f069baa862e728d839dd2ebb904737effb
+  geolocator_apple: ab36aa0e8b7d7a2d7639b3b4e48308394e8cef5e
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
+  shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
+  vietmap_tracking_plugin: 726c5bdec54f8d8a94f085caf3c6cc9769e4e2a4
+  VietmapTrackingSDK: 8b4923088ea223faf9e7fd81f350e4d2567f2ace
 
-PODFILE CHECKSUM: 062fbd1880f0c847d6456d2bcf030915705d5f00
+PODFILE CHECKSUM: 76ecf04c1f60d0d4ea221378ec56d09b9c00fc28
 
-COCOAPODS: 1.15.2
+COCOAPODS: 1.16.2

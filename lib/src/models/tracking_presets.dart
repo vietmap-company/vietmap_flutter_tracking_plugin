@@ -8,7 +8,7 @@ class TrackingPresets {
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
-      intervalMs: 3000,
+      intervalMs: 5000,
       distanceFilter: 5.0,
       accuracy: LocationAccuracy.high,
       backgroundMode: true,
@@ -23,7 +23,7 @@ class TrackingPresets {
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
-      intervalMs: 5000,
+      intervalMs: 10000,
       distanceFilter: 10.0,
       accuracy: LocationAccuracy.high,
       backgroundMode: true,
@@ -38,8 +38,8 @@ class TrackingPresets {
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
-      intervalMs: 10000,
-      distanceFilter: 15.0,
+      intervalMs: 30000,
+      distanceFilter: 30.0,
       accuracy: LocationAccuracy.medium,
       backgroundMode: true,
       notificationTitle: notificationTitle ?? 'Location Tracking',
@@ -53,7 +53,7 @@ class TrackingPresets {
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
-      intervalMs: 30000,
+      intervalMs: 600000,
       distanceFilter: 50.0,
       accuracy: LocationAccuracy.low,
       backgroundMode: true,

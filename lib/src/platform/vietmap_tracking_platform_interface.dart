@@ -63,11 +63,10 @@ abstract class VietmapTrackingPlatform extends PlatformInterface {
   Future<Map<String, dynamic>> getTrackingHealthStatus();
   Future<String> getTrackingHistory({
     required String userId,
-    required int fromTime,
-    required int toTime,
+    int? fromTime,
+    int? toTime,
     int pageNumber = 1,
     int pageSize = 100,
-    String sortBy = 'timestamp',
     bool sortDescending = false,
   });
 

@@ -272,14 +272,12 @@ class VietmapTrackingPlugin {
   ///   `0` for timer-only mode.
   /// - [userId] Driver / user identifier attached to every GPS record.
   /// - [vehicleId] Vehicle identifier attached to every GPS record.
-  /// - [deviceId] Device identifier attached to every GPS record.
   Future<bool> startTracking({
     bool   backgroundMode  = true,
     int    intervalMs      = 5000,
     double distanceFilter  = 0.0,
     String? userId,
     String? vehicleId,
-    String? deviceId,
     String? notificationTitle,
     String? notificationMessage,
   }) async {
@@ -290,7 +288,6 @@ class VietmapTrackingPlugin {
         'distanceFilter':      distanceFilter,
         if (userId   != null) 'userId':              userId,
         if (vehicleId != null) 'vehicleId':          vehicleId,
-        if (deviceId  != null) 'deviceId':           deviceId,
         if (notificationTitle   != null) 'notificationTitle':   notificationTitle,
         if (notificationMessage != null) 'notificationMessage': notificationMessage,
       });

@@ -301,21 +301,19 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   @override
   Future<String> getTrackingHistory({
     required String userId,
-    required int fromTime,
-    required int toTime,
+    int? fromTime,
+    int? toTime,
     int pageNumber = 1,
     int pageSize = 100,
-    String sortBy = 'timestamp',
     bool sortDescending = false,
   }) async {
     try {
       final result = await _channel.invokeMethod<String>('getTrackingHistory', {
         'userId': userId,
-        'fromTime': fromTime,
-        'toTime': toTime,
+        if (fromTime != null) 'fromTime': fromTime,
+        if (toTime != null) 'toTime': toTime,
         'pageNumber': pageNumber,
         'pageSize': pageSize,
-        'sortBy': sortBy,
         'sortDescending': sortDescending,
       });
       if (result == null) {

@@ -11,7 +11,6 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     private var baseURL: String?
     
     // Device metadata (from startTracking config)
-    private var deviceId: String?
     private var userId: String?
     private var vehicleId: String?
 
@@ -115,8 +114,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             let speed = dict["speed"] ?? "?"
             let heading = dict["heading"] ?? dict["bearing"] ?? "?"
             let accuracy = dict["accuracy"] ?? "?"
-            let ts = dict["timestamp"] ?? "?"
-            let devId = dict["deviceId"] ?? self.deviceId ?? "?"
+            let ts = dict["time"] ?? dict["timestamp"] ?? "?"
+            let devId = dict["deviceId"] ?? "?"
             let uid = dict["userId"] ?? dict["driverId"] ?? self.userId ?? "?"
             let vid = dict["vehicleId"] ?? self.vehicleId ?? "?"
 
@@ -777,11 +776,9 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let sdkIntervalMs: NSNumber? = intervalMsInput.map { NSNumber(value: $0) }
         let sdkDistanceFilter: NSNumber? = distanceFilterInput.map { NSNumber(value: $0) }
 
-        let deviceId = args?["deviceId"] as? String
         let userId = args?["userId"] as? String
         let vehicleId = args?["vehicleId"] as? String
 
-        self.deviceId = deviceId
         self.userId = userId
         self.vehicleId = vehicleId
 
@@ -798,7 +795,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         }
 
         nativeLog("🚀 startTracking | bg=\(backgroundMode) \(triggerMode) mock=\(allowMockLocation) smartBattery=\(smartBatteryEnabled)")
-        nativeLog("🆔 ids | deviceId=\(deviceId ?? "nil") userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
+        nativeLog("🆔 ids | userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
 
         // ── Fake GPS Toggle ──
         // allowMockLocation=true  → SDK lets fake GPS pass through (no detection).
@@ -918,12 +915,12 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         }
 
         let userId = (args["userId"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let fromTime = (args["fromTime"] as? NSNumber)?.int64Value ?? 0
-        let toTime = (args["toTime"] as? NSNumber)?.int64Value ?? 0
+        let rawFromTime = (args["fromTime"] as? NSNumber)?.int64Value ?? 0
+        let rawToTime = (args["toTime"] as? NSNumber)?.int64Value ?? 0
+        let fromTime: Int64 = rawFromTime > 0 ? rawFromTime : 0
+        let toTime: Int64 = rawToTime > 0 ? rawToTime : Int64(Date().timeIntervalSince1970 * 1000)
         let pageNumber = (args["pageNumber"] as? NSNumber)?.intValue ?? 1
         let pageSize = (args["pageSize"] as? NSNumber)?.intValue ?? 100
-        let sortByRaw = (args["sortBy"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let sortBy = sortByRaw.isEmpty ? "timestamp" : sortByRaw
         let sortDescending = args["sortDescending"] as? Bool ?? false
 
         guard !userId.isEmpty else {
@@ -933,14 +930,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        guard fromTime > 0, toTime > 0, fromTime <= toTime else {
-            result(FlutterError(code: "INVALID_ARGUMENTS",
-                              message: "fromTime/toTime are invalid",
-                              details: nil))
-            return
-        }
-
-        nativeLog("📜 getTrackingHistory | userId=\(userId) from=\(fromTime) to=\(toTime) page=\(pageNumber) size=\(pageSize) sortBy=\(sortBy) desc=\(sortDescending)")
+        nativeLog("📜 getTrackingHistory | userId=\(userId) from=\(fromTime) to=\(toTime) page=\(pageNumber) size=\(pageSize) desc=\(sortDescending)")
 
         trackingManager.getHistory(
             userId: userId,
@@ -948,7 +938,6 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             toTime: toTime,
             pageNumber: pageNumber,
             pageSize: pageSize,
-            sortBy: sortBy,
             sortDescending: sortDescending
         ) { [weak self] historyJson, errorCode, errorMessage in
             self?.nativeLog("📜 getTrackingHistory callback | errorCode=\(errorCode ?? "nil") message=\(errorMessage ?? "nil")")

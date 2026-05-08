@@ -31,8 +31,9 @@ flutter_ios_podfile_setup
 target 'Runner' do
   use_frameworks!
 
-  # Use CocoaPods published VietmapTrackingSDK (not local path)
-  pod 'VietmapTrackingSDK', '1.4.0'
+  # Use local VietmapTrackingSDK
+  pod 'VietmapTrackingSDK', '1.4.1'
+  # pod 'VietmapTrackingSDK', :path => '/Users/khiempg/Develop/map-sdk-tracking/ios'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do

@@ -64,7 +64,6 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     // Store configuration for manual POST if needed
     private var apiKey: String? = null
     private var baseURL: String? = null
-    private var deviceId: String? = null
     private var userId: String? = null
     private var vehicleId: String? = null
 
@@ -533,6 +532,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         return fineLocation && coarseLocation
     }
 
+
     /** Helper: check if background location permission is granted */
     private fun hasBackgroundLocationPermission(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -827,17 +827,15 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 val notificationMessage = args?.get("notificationMessage") as? String
                 val allowMockLocation = args?.get("allowMockLocation") as? Boolean ?: false
 
-                val deviceId = args?.get("deviceId") as? String
                 val userId = args?.get("userId") as? String
                 val vehicleId = args?.get("vehicleId") as? String
 
                 // Store in instance properties
-                this.deviceId = deviceId
                 this.userId = userId
                 this.vehicleId = vehicleId
 
                 Log.d("VietmapTrackingPlugin", "🚀 startTracking | interval=${intervalMs}ms distance=${distanceFilter}m bg=$backgroundMode mock=$allowMockLocation")
-                Log.d("VietmapTrackingPlugin", "🆔 device=$deviceId user=$userId vehicle=$vehicleId")
+                Log.d("VietmapTrackingPlugin", "🆔 user=$userId vehicle=$vehicleId")
 
                 // Update configuration with allowMockLocation
                 try {
@@ -1071,11 +1069,10 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             try {
                 val args = call.arguments as? Map<*, *> ?: emptyMap<Any, Any>()
                 val userId = (args["userId"] as? String)?.trim().orEmpty()
-                val fromTime = (args["fromTime"] as? Number)?.toLong() ?: 0L
-                val toTime = (args["toTime"] as? Number)?.toLong() ?: 0L
+                val fromTime = (args["fromTime"] as? Number)?.toLong()?.takeIf { it > 0L } ?: 0L
+                val toTime = (args["toTime"] as? Number)?.toLong()?.takeIf { it > 0L } ?: System.currentTimeMillis()
                 val pageNumber = (args["pageNumber"] as? Number)?.toInt() ?: 1
                 val pageSize = (args["pageSize"] as? Number)?.toInt() ?: 100
-                val sortBy = (args["sortBy"] as? String)?.trim().orEmpty().ifEmpty { "timestamp" }
                 val sortDescending = args["sortDescending"] as? Boolean ?: false
 
                 if (userId.isEmpty()) {
@@ -1083,14 +1080,9 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     return
                 }
 
-                if (fromTime <= 0L || toTime <= 0L || fromTime > toTime) {
-                    result.error("INVALID_ARGUMENTS", "fromTime/toTime are invalid", null)
-                    return
-                }
-
                 Log.d(
                     "VietmapTrackingPlugin",
-                    "📜 getTrackingHistory | userId=$userId from=$fromTime to=$toTime page=$pageNumber size=$pageSize sortBy=$sortBy desc=$sortDescending"
+                    "📜 getTrackingHistory | userId=$userId from=$fromTime to=$toTime page=$pageNumber size=$pageSize desc=$sortDescending"
                 )
 
                 vietmapSDK.getHistory(
@@ -1099,7 +1091,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     toTime,
                     pageNumber,
                     pageSize,
-                    sortBy,
+                    "timestamp", // sortBy: removed from Flutter API but still required by Android SDK signature
                     sortDescending,
                     object : VietmapTrackingSDK.HistoryCallback {
                         override fun onHistorySuccess(historyJson: String) {

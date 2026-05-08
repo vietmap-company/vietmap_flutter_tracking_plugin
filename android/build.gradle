@@ -16,7 +16,7 @@ buildscript {
 
 allprojects {
     repositories {
-        // mavenLocal() // Disabled: using JitPack package
+        //mavenLocal()
         google()
         mavenCentral()
         maven { url 'https://jitpack.io' }
@@ -51,8 +51,8 @@ android {
 
     dependencies {
         // VietmapTrackingSDK for Android (JitPack)
-        implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.4.0'
-                
+        implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.4.1'
+        //implementation 'com.vietmap:tracking-sdk:1.0.4'
         // Google Play Services for Location
         implementation 'com.google.android.gms:play-services-location:21.0.1'
         

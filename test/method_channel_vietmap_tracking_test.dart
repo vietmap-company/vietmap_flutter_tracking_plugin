@@ -718,7 +718,6 @@ void main() {
         toTime: 1700003600000,
         pageNumber: 2,
         pageSize: 50,
-        sortBy: 'timestamp',
         sortDescending: true,
       );
 
@@ -728,7 +727,6 @@ void main() {
       expect(capturedArgs!['toTime'], 1700003600000);
       expect(capturedArgs!['pageNumber'], 2);
       expect(capturedArgs!['pageSize'], 50);
-      expect(capturedArgs!['sortBy'], 'timestamp');
       expect(capturedArgs!['sortDescending'], true);
     });
 
