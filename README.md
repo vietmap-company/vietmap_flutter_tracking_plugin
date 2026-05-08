@@ -146,9 +146,12 @@ await controller.requestAlwaysLocationPermissions();
 
 ### 3. Start Tracking
 
+> **Important — `userId` is required:** Always pass `userId` in `LocationTrackingConfig`. Without it the SDK cannot associate GPS records with a user account and tracking will fail server-side.
+
 ```dart
 await controller.startTracking(
   LocationTrackingConfig(
+    userId: 'your-user-id',   // required — GPS records are keyed to this ID
     intervalMs: 30000,
     accuracy: LocationAccuracy.high,
     backgroundMode: true,
@@ -158,13 +161,15 @@ await controller.startTracking(
 );
 ```
 
-Or use a preset:
+Or use a preset with `copyWith()` to attach identifiers:
 
 ```dart
-await controller.startTracking(TrackingPresets.navigation());
+await controller.startTracking(
+  TrackingPresets.general().copyWith(userId: 'your-user-id'),
+);
 ```
 
-> **Important:** To pass identifiers (e.g. `userId`, `vehicleId`) with a preset, use `copyWith()`. Do **not** use `setDriverId()` / `setVehicleId()` for initial setup — those methods update identifiers during an already-active tracking session.
+> Do **not** use `setDriverId()` / `setVehicleId()` for initial setup — those methods update identifiers during an already-active tracking session.
 
 ### 4. Listen for Updates
 
@@ -281,10 +286,10 @@ variants. Choose the variant that matches your use case.
 #### Interval-based (timer-driven)
 
 ```dart
-TrackingPresets.navigation()    // 3 s — high accuracy, real-time vehicle tracking
-TrackingPresets.fitness()       // 5 s — outdoor activities
-TrackingPresets.general()       // 10 s — balanced fleet/delivery tracking
-TrackingPresets.batterySaver()  // 30 s — slow or parked assets
+TrackingPresets.navigation()    //  5 s   — high accuracy, real-time vehicle tracking
+TrackingPresets.fitness()       // 10 s   — outdoor activities (running, cycling)
+TrackingPresets.general()       // 30 s   — balanced fleet/delivery tracking
+TrackingPresets.batterySaver()  //  5 min — slow or parked assets
 ```
 
 #### Distance-based (movement-driven)
@@ -296,11 +301,11 @@ TrackingPresets.generalDistance()      // every 30 m — general tracking
 TrackingPresets.batterySaverDistance() // every 100 m — maximum conservation
 ```
 
-To attach user identifiers to a preset, use `copyWith()`:
+Always attach `userId` via `copyWith()` when starting from a preset:
 
 ```dart
 await controller.startTracking(
-  TrackingPresets.general().copyWith(userId: 'user-123'),
+  TrackingPresets.general().copyWith(userId: 'your-user-id'),
 );
 ```
 
@@ -392,24 +397,27 @@ await controller.configureAlertAPI('key', 'id');
 
 ### Tracking Control
 
-```dart
-await controller.startTracking(config);          // start
-await controller.stopTracking();                  // stop
-final loc    = await controller.getCurrentLocation();
-final status = await controller.getTrackingStatus();
-final active = await controller.isTrackingActive();
-await controller.updateTrackingConfig(newConfig); // ⚠ see note below
-```
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `startTracking(config)` | `bool` | Start GPS tracking with the given config. `userId` in config is required. |
+| `stopTracking()` | `bool` | Stop tracking. The SDK may flush pending cached records after stop. |
+| `isTrackingActive()` | `bool` | Whether the tracking session is currently running. |
+| `getCurrentLocation()` | `LocationData?` | Most recent known location from the SDK. `null` if no fix yet. |
+| `getTrackingStatus()` | `TrackingStatus` | Live status including `isTracking`, `trackingDuration`, `lastLocationUpdate`. |
+| `getTrackingHealthStatus()` | `Map` | Diagnostic snapshot: network state, cache count, SDK internal flags. |
+| `updateTrackingConfig(config)` | `bool` | Apply a new config to a running session — see platform note below. |
 
-#### ⚠ `updateTrackingConfig` Behaviour
+#### ⚠ `updateTrackingConfig` Platform Behaviour
 
-Internally performs `stopTracking()` → `startTracking(newConfig)`. Side-effects:
+**Android** — Uses reflection to update `intervalMs` / `distanceFilter` *without* restarting the Foreground Service. Safe to call frequently. `backgroundMode` changes are applied separately.
 
+**iOS** — iOS SDK does not expose `setTrackingInterval`/`setDistanceFilter` publicly, so the bridge performs `stopTracking()` → `startTracking(newConfig)`. Side-effects:
 - Brief gap in location updates during transition
 - `trackingDuration` resets to zero (new session)
 - Status stream emits `isTracking: false` then `isTracking: true`
+- Pending cached records may be lost on restart
 
-If session continuity matters, manage stop/start manually.
+If session continuity matters on iOS, manage stop/start manually.
 
 ---
 
@@ -464,13 +472,15 @@ await controller.configureCacheLimits(maxRecords: 5000, maxDbSizeBytes: 52428800
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `intervalMs` | `int?` | `null` | Update interval in ms; `null` = SDK default |
-| `distanceFilter` | `double?` | `null` | Min distance in metres; `null` = SDK default |
+| **`userId`** | `String?` | `null` | **Required.** User identifier — GPS records are keyed to this value server-side. Omitting it will cause tracking records to be unattributed. |
+| `vehicleId` | `String?` | `null` | Optional vehicle identifier attached to each GPS record. |
+| `intervalMs` | `int?` | `null` | Interval-mode: update every N ms. Set `distanceFilter` to `null` when using this. |
+| `distanceFilter` | `double?` | `null` | Distance-mode: update after moving M metres. Set `intervalMs` to `null` when using this. |
 | `accuracy` | `LocationAccuracy` | `high` | `high` / `medium` / `low` |
 | `backgroundMode` | `bool` | `true` | Continue tracking when app is in background |
-| `notificationTitle` | `String?` | — | Android foreground service title |
-| `notificationMessage` | `String?` | — | Android foreground service body |
-| `allowMockLocation` | `bool` | `false` | Allow fake/mock GPS input |
+| `notificationTitle` | `String?` | — | Android foreground service notification title |
+| `notificationMessage` | `String?` | — | Android foreground service notification body |
+| `allowMockLocation` | `bool` | `true` | When `false`, the SDK detects fake/mock GPS and applies the active `FakeGpsPolicy`. |
 
 ---
 
@@ -528,81 +538,6 @@ LocationUtils.kmhToMetersPerSecond(90.0); // → 25.0
 // Geofence check
 LocationUtils.isWithinRadius(location, targetLat, targetLng, radiusMetres);
 ```
-
----
-
-## Complete Minimal Example
-
-```dart
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
-import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
-
-void main() {
-  WidgetsFlutterBinding.ensureInitialized();
-  runApp(const MyApp());
-}
-
-class MyApp extends StatefulWidget {
-  const MyApp({super.key});
-  @override
-  State<MyApp> createState() => _MyAppState();
-}
-
-class _MyAppState extends State<MyApp> {
-  final _ctrl = VietmapTrackingController.instance;
-  LocationData? _loc;
-  bool _tracking = false;
-  String? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _init();
-  }
-
-  Future<void> _init() async {
-    try {
-      await _ctrl.initializeTracking(
-        'your-api-key', // Contact Vietmap to get an API key
-      );
-      _ctrl.onLocationUpdate.listen((l) => setState(() => _loc = l));
-      _ctrl.onTrackingStatusChanged.listen((s) => setState(() => _tracking = s.isTracking));
-    } on PlatformException catch (e) {
-      setState(() => _error = e.message);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('Vietmap Tracking')),
-        body: Center(
-          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-            if (_error != null)
-              Text('Error: \$_error', style: const TextStyle(color: Colors.red)),
-            Text('Status: \${_tracking ? "Tracking" : "Idle"}'),
-            Text('Lat: \${_loc?.latitude ?? "—"}'),
-            Text('Lng: \${_loc?.longitude ?? "—"}'),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _tracking ? null : () => _ctrl.startTracking(TrackingPresets.navigation()),
-              child: const Text('Start'),
-            ),
-            ElevatedButton(
-              onPressed: _tracking ? _ctrl.stopTracking : null,
-              child: const Text('Stop'),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
-}
-```
-
-See the [example](example/) directory for a full working app with all features.
 
 ---
 
@@ -683,14 +618,14 @@ Dir.glob(File.join(installer.sandbox.root, '**', '._*')).each { |f| FileUtils.rm
 ├──────────────────────────────────────────────┤
 │          Platform Interface (Dart)           │
 │   MethodChannel: vietmap_tracking_plugin     │
-│   EventChannel:  /location_updates          │
-│   EventChannel:  /tracking_status           │
+│   EventChannel:  /location_updates           │
+│   EventChannel:  /tracking_status            │
 ├─────────────────────┬────────────────────────┤
 │  iOS Native Bridge  │ Android Native Bridge  │
 │   (Swift)           │  (Kotlin)              │
 ├─────────────────────┼────────────────────────┤
 │ VietmapTrackingSDK  │ VietmapTrackingSDK     │
-│ 1.3.5 (CocoaPods)   │ 1.3.7                  │
+│ 1.3.10 (CocoaPods)  │ 1.3.9                  │
 └─────────────────────┴────────────────────────┘
 ```
 

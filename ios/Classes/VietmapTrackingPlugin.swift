@@ -91,7 +91,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     // MARK: - SDK Callbacks Setup
     private func setupSDKCallbacks() {
         nativeLog("=======Setup SDK Callbacks=======")
-        nativeLog("🔌 setupSDKCallbacks attached")
+        nativeLog("setupSDKCallbacks attached")
 
         // SDK tự quản lý toàn bộ pipeline:
         //   GPS captured → lưu SQLite (SENDING) → POST online / reset PENDING offline
@@ -836,7 +836,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     }
 
     private func handleStartResult(success: Bool, message: String?, result: @escaping FlutterResult) {
-        self.nativeLog("🏁 startTracking result | success=\(success) message=\(message ?? "nil")")
+        self.nativeLog("startTracking result | success=\(success) message=\(message ?? "nil")")
         DispatchQueue.main.async {
             result(success)
         }
@@ -1120,9 +1120,16 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
     /// setSmartBatteryConfig(enabled: bool, preset: String)
     /// Bật/tắt tối ưu pin thông minh trên iOS.
-    /// - enabled=true → activityType=.automotiveNavigation + pausesAuto=true (hiệu lực lần startTracking kế tiếp hoặc ngay lập tức nếu đang tracking)
-    /// - preset: "navigation" | "general" | "batterySaver" — không áp dụng trực tiếp trên iOS
-    ///   vì iOS CoreLocation tự điều chỉnh; chỉ log để reference.
+    ///
+    /// - enabled=true → `activityType = .automotiveNavigation` + `pausesAuto=true`
+    ///   (áp dụng ngay nếu đang tracking, hiệu lực lần startTracking kế tiếp nếu chưa tracking).
+    /// - preset: "navigation" | "general" | "batterySaver"
+    ///   Preset name tương ứng với TrackingPresets trong Dart layer:
+    ///     navigation  → intervalMs=5000  (5s)
+    ///     general     → intervalMs=30000 (30s)
+    ///     batterySaver→ intervalMs=300000 (5m)
+    ///   Trên iOS CoreLocation tự điều chỉnh tần suất GPS theo tốc độ/góc cua;
+    ///   interval/distance KHÔNG được set trực tiếp ở đây — chỉ log để reference.
     private func setSmartBatteryConfig(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
             logSection("Smart Battery Config")
         let args = call.arguments as? [String: Any]

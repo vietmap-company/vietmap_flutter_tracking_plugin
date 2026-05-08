@@ -837,28 +837,39 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 Log.d("VietmapTrackingPlugin", "startTracking | interval=${intervalMs}ms distance=${distanceFilter}m bg=$backgroundMode mock=$allowMockLocation")
                 Log.d("VietmapTrackingPlugin", "user=$userId vehicle=$vehicleId")
 
-                // Update configuration with allowMockLocation
+                // Build TrackingConfig based on trigger mode (matches Dart TrackingPresets model):
+                //   Interval-only → set intervalMs, distanceFilter=0.0 (no displacement filter)
+                //   Distance-only → set distanceFilter, intervalMs=Long.MAX_VALUE (time never triggers)
+                //   Both null     → skip; SDK uses its internal defaults
                 try {
-                    // signature: (long intervalMs, double distanceFilter, boolean enableSpeedAlerts, 
-                    //             boolean allowMockLocation, double speedThreshold, String accuracy, 
-                    //             boolean enableBackgroundMode)
-                    // If intervalMs or distanceFilter are null, we don't call setTrackingConfig 
-                    // and let the SDK use its internal defaults.
-                    if (intervalMs != null && distanceFilter != null) {
-                        val config = TrackingConfig(
-                            intervalMs,
-                            distanceFilter,
-                            false,             // enableSpeedAlerts
-                            allowMockLocation,
-                            0.0,               // speedThreshold
-                            "high",            // accuracy
-                            backgroundMode
-                        )
-                        vietmapSDK.setTrackingConfig(config)
-                    } else {
-                        Log.d("VietmapTrackingPlugin", "Using SDK default tracking config (interval/distance not provided)")
-                        // Even if we don't set the full config, we might want to set the mock policy if the SDK allows it separately
-                        // For now based on TrackingConfig constructor 1.0.4, it's bundled.
+                    when {
+                        intervalMs != null && distanceFilter == null -> {
+                            // Interval-only mode — matches TrackingPresets.*() variants
+                            val config = TrackingConfig(
+                                intervalMs, 0.0,
+                                false, allowMockLocation, 0.0, "high", backgroundMode
+                            )
+                            vietmapSDK.setTrackingConfig(config)
+                        }
+                        distanceFilter != null && intervalMs == null -> {
+                            // Distance-only mode — matches TrackingPresets.*Distance() variants
+                            val config = TrackingConfig(
+                                Long.MAX_VALUE, distanceFilter,
+                                false, allowMockLocation, 0.0, "high", backgroundMode
+                            )
+                            vietmapSDK.setTrackingConfig(config)
+                        }
+                        intervalMs != null && distanceFilter != null -> {
+                            // Both explicitly provided — respect both as sent
+                            val config = TrackingConfig(
+                                intervalMs, distanceFilter,
+                                false, allowMockLocation, 0.0, "high", backgroundMode
+                            )
+                            vietmapSDK.setTrackingConfig(config)
+                        }
+                        else -> {
+                            Log.d("VietmapTrackingPlugin", "No interval/distance provided → SDK uses internal defaults")
+                        }
                     }
                 } catch (e: Exception) {
                     Log.w("VietmapTrackingPlugin", "setTrackingConfig(TrackingConfig) failed: ${e.message}")
@@ -1134,13 +1145,39 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
             try {
                 val args = call.arguments as? Map<*, *>
-                val intervalMs = (args?.get("intervalMs") as? Number)?.toLong() ?: 5000L
-                val distanceFilter = (args?.get("distanceFilter") as? Number)?.toDouble() ?: 10.0
+                val intervalMs = (args?.get("intervalMs") as? Number)?.toLong()
+                val distanceFilter = (args?.get("distanceFilter") as? Number)?.toDouble()
+
+                // Resolve effective values per trigger mode (mirrors Dart TrackingPresets model):
+                //   Interval-only: distanceFilter=0.0 (no displacement filter)
+                //   Distance-only: intervalMs=Long.MAX_VALUE (time never triggers)
+                //   Both null: fall back to general preset (30s interval, no distance filter)
+                val effectiveInterval: Long
+                val effectiveDistance: Double
+                when {
+                    intervalMs != null && distanceFilter == null -> {
+                        effectiveInterval = intervalMs
+                        effectiveDistance = 0.0
+                    }
+                    distanceFilter != null && intervalMs == null -> {
+                        effectiveInterval = Long.MAX_VALUE
+                        effectiveDistance = distanceFilter
+                    }
+                    intervalMs != null && distanceFilter != null -> {
+                        effectiveInterval = intervalMs
+                        effectiveDistance = distanceFilter
+                    }
+                    else -> {
+                        // Neither provided: restore general preset default
+                        effectiveInterval = 30000L
+                        effectiveDistance = 0.0
+                    }
+                }
 
                 // Use safe reflection-based update to avoid SDK's setDistanceFilter()
                 // which internally does stopTracking()+startTracking() and restarts
                 // the Foreground Service, causing ForegroundServiceDidNotStartInTimeException.
-                safeUpdateTrackingConfig(intervalMs, distanceFilter)
+                safeUpdateTrackingConfig(effectiveInterval, effectiveDistance)
 
                 // Handle explicit background mode disable request from user
                 val userBgArg = args?.get("backgroundMode") as? Boolean
@@ -1279,7 +1316,8 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
      * - enabled=true → áp dụng TrackingConfig phù hợp với preset ngay lập tức
      *   (SmartBatteryManager trên Dart cũng gọi khi phát hiện pin thấp / xe dừng)
      * - preset: "navigation" | "general" | "batterySaver"
-     *   Ánh xạ trực tiếp vào TrackingConfig: interval, distance filter
+     *   Ánh xạ vào interval-based TrackingConfig (distanceFilter=0.0 — không dùng distance trigger).
+     *   Giá trị interval đồng bộ với TrackingPresets trong Dart layer.
      */
     private fun handleSetSmartBatteryConfig(call: MethodCall, result: Result) {
         if (!isInitialized) {
@@ -1299,25 +1337,31 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             // which internally does stopTracking()+startTracking() and restarts the
             // Foreground Service → ForegroundServiceDidNotStartInTimeException crash.
             // No 6s guard needed — safeUpdateTrackingConfig never restarts the service.
+            // SmartBattery always uses INTERVAL-ONLY mode (distanceFilter=0.0 → no displacement filter).
+            // Values must stay in sync with TrackingPresets in the Dart layer.
             if (enabled && vietmapSDK.isTracking()) {
                 when (preset) {
                     "navigation" -> {
-                        safeUpdateTrackingConfig(3000L, 5.0)
-                        Log.i(tag, "Preset=navigation | interval=3s distance=5m")
+                        // TrackingPresets.navigation() → intervalMs=5000, distanceFilter=null
+                        safeUpdateTrackingConfig(5000L, 0.0)
+                        Log.i(tag, "Preset=navigation | interval=5s distance=disabled")
                     }
                     "batterySaver" -> {
-                        safeUpdateTrackingConfig(30000L, 50.0)
-                        Log.i(tag, "Preset=batterySaver | interval=30s distance=50m")
+                        // TrackingPresets.batterySaver() → intervalMs=300000, distanceFilter=null
+                        safeUpdateTrackingConfig(300000L, 0.0)
+                        Log.i(tag, "Preset=batterySaver | interval=300s distance=disabled")
                     }
                     else -> {
-                        safeUpdateTrackingConfig(10000L, 15.0)
-                        Log.i(tag, "Preset=general | interval=10s distance=15m")
+                        // "general" (default) → TrackingPresets.general() → intervalMs=30000, distanceFilter=null
+                        safeUpdateTrackingConfig(30000L, 0.0)
+                        Log.i(tag, "Preset=general | interval=30s distance=disabled")
                     }
                 }
                 Log.i(tag, "TrackingConfig applied for preset=$preset")
             } else if (!enabled && vietmapSDK.isTracking()) {
-                safeUpdateTrackingConfig(5000L, 10.0)
-                Log.i(tag, "SmartBattery disabled: restored default config")
+                // Restore general preset; Dart layer will call updateTrackingConfig(activeConfig) to apply user config
+                safeUpdateTrackingConfig(30000L, 0.0)
+                Log.i(tag, "SmartBattery disabled: restored general preset (Dart layer may override)")
             }
 
             result.success(true)

@@ -76,14 +76,14 @@ class TrackingPresets {
     );
   }
 
-  /// Low accuracy, timer-driven updates every 30 seconds.
+  /// Low accuracy, timer-driven updates every 5 minutes.
   /// Minimises battery consumption; suitable for slow-moving assets.
   static LocationTrackingConfig batterySaver({
     String? notificationTitle,
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
-      intervalMs: 600000,
+      intervalMs: 300000,
       distanceFilter: null,
       accuracy: LocationAccuracy.low,
       backgroundMode: true,

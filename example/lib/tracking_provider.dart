@@ -401,15 +401,53 @@ class TrackingProvider extends ChangeNotifier {
 
   LocationTrackingConfig get activeConfig {
     if (useCustomConfig) {
-      // Timer mode  → chỉ dùng interval, null distance filter
-      // Distance mode → chỉ dùng distanceFilter, null interval
-      // Cả hai OFF   → dùng null cho cả hai (SDK defaults)
-      final int? resolvedInterval = _trackingWithDistance ? null : (_trackingWithTimer ? customIntervalMs : null);
-      final double? resolvedDistance = _trackingWithTimer ? null : (_trackingWithDistance ? customDistanceFilter : null);
+      return _buildCustomConfig();
+    }
+    // Default mode: use general preset
+    return TrackingPresets.general().copyWith(
+      userId: effectiveUserId,
+      allowMockLocation: allowMockLocation,
+    );
+  }
 
-      return LocationTrackingConfig(
-        intervalMs: resolvedInterval,
-        distanceFilter: resolvedDistance,
+
+  /// - **Timer mode**: SDK fires an update every [customIntervalMs] milliseconds.
+  ///   [distanceFilter] is null so movement is never required between updates.
+  /// - **Distance mode**: SDK fires an update every [customDistanceFilter] metres.
+  ///   [intervalMs] is null so time between updates is not capped.
+ 
+  LocationTrackingConfig _buildCustomConfig() {
+    final LocationTrackingConfig base;
+
+    if (_trackingWithTimer) {
+      // Interval-based: fire every N milliseconds regardless of distance moved.
+      base = LocationTrackingConfig(
+        intervalMs: customIntervalMs,
+        distanceFilter: null,
+        accuracy: LocationAccuracy.high,
+        backgroundMode: customBackgroundMode,
+        notificationTitle: 'GPS Tracking',
+        notificationMessage: 'Your location is being tracked',
+        userId: effectiveUserId,
+        allowMockLocation: allowMockLocation,
+      );
+    } else if (_trackingWithDistance) {
+      // Distance-based: fire every N metres regardless of time elapsed.
+      base = LocationTrackingConfig(
+        intervalMs: null,
+        distanceFilter: customDistanceFilter,
+        accuracy: LocationAccuracy.high,
+        backgroundMode: customBackgroundMode,
+        notificationTitle: 'GPS Tracking',
+        notificationMessage: 'Your location is being tracked',
+        userId: effectiveUserId,
+        allowMockLocation: allowMockLocation,
+      );
+    } else {
+      // No trigger selected: delegate fully to SDK defaults.
+      base = LocationTrackingConfig(
+        intervalMs: null,
+        distanceFilter: null,
         accuracy: LocationAccuracy.high,
         backgroundMode: customBackgroundMode,
         notificationTitle: 'GPS Tracking',
@@ -418,11 +456,8 @@ class TrackingProvider extends ChangeNotifier {
         allowMockLocation: allowMockLocation,
       );
     }
-    // Default mode: use general preset (10s / 15m, balanced battery/accuracy)
-    return TrackingPresets.general().copyWith(
-      userId: effectiveUserId,
-      allowMockLocation: allowMockLocation,
-    );
+
+    return base;
   }
 
   // ─────────────────────────────────────────────────────────────────
