@@ -95,7 +95,7 @@ class TrackingLocation {
             );
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
-          debugPrint("✅ Location sent successfully: ${response.statusCode}");
+          debugPrint("Location sent successfully: ${response.statusCode}");
 
           // Update previous location on success
           gpsLocationPrevious = data.copyWith();
@@ -106,18 +106,18 @@ class TrackingLocation {
           }
         } else {
           debugPrint(
-            "❌ Failed to send location: ${response.statusCode} - ${response.body}",
+            "Failed to send location: ${response.statusCode} - ${response.body}",
           );
           _handleFailedLocation(data);
         }
       } else {
         debugPrint(
-          "❌ Missing configuration: baseUrl=$baseUrl, apiKey=${apiKey != null ? 'set' : 'null'}",
+          "Missing configuration: baseUrl=$baseUrl, apiKey=${apiKey != null ? 'set' : 'null'}",
         );
         _handleFailedLocation(data);
       }
     } catch (e) {
-      debugPrint("❌ Error sending location: $e");
+      debugPrint("Error sending location: $e");
       _handleFailedLocation(data);
     }
   }
@@ -127,7 +127,7 @@ class TrackingLocation {
     listTrackingWhenFailed.add(location);
     await VietMapPreference().setListGPS(listTrackingWhenFailed);
     debugPrint(
-      "📦 Added failed location to cache. Total: ${listTrackingWhenFailed.length}",
+      "Added failed location to cache. Total: ${listTrackingWhenFailed.length}",
     );
   }
 
@@ -135,7 +135,7 @@ class TrackingLocation {
   static _sendFailedLocations() async {
     if (listTrackingWhenFailed.isEmpty) return;
 
-    debugPrint("🔄 Retrying ${listTrackingWhenFailed.length} failed locations");
+    debugPrint("Retrying ${listTrackingWhenFailed.length} failed locations");
 
     final locationsToRetry = List<GpsLocation>.from(listTrackingWhenFailed);
     listTrackingWhenFailed.clear();
@@ -180,14 +180,14 @@ class TrackingLocation {
 
         if (response.statusCode >= 200 && response.statusCode < 300) {
           debugPrint(
-            "✅ Successfully sent ${locationsToRetry.length} cached locations",
+            "Successfully sent ${locationsToRetry.length} cached locations",
           );
           await VietMapPreference().setListGPS(
             listTrackingWhenFailed,
           ); // Clear cache
         } else {
           debugPrint(
-            "❌ Failed to send cached locations: ${response.statusCode}",
+            "Failed to send cached locations: ${response.statusCode}",
           );
           listTrackingWhenFailed.addAll(locationsToRetry); // Add back to cache
           await VietMapPreference().setListGPS(listTrackingWhenFailed);

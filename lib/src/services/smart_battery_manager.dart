@@ -113,10 +113,10 @@ class SmartBatteryManager {
       _isCharging = state == BatteryState.charging || state == BatteryState.full;
       _lastBatteryFetchTime = DateTime.now();
       debugPrint(
-        '🔋 [SmartBattery] prefetch | level=$_lastBatteryLevel% charging=$_isCharging',
+        '[SmartBattery] prefetch | level=$_lastBatteryLevel% charging=$_isCharging',
       );
     } catch (e) {
-      debugPrint('🔋 [SmartBattery] prefetchBattery failed: $e');
+      debugPrint('[SmartBattery] prefetchBattery failed: $e');
     }
   }
 
@@ -142,7 +142,7 @@ class SmartBatteryManager {
     }
     _enabled = true;
 
-    debugPrint('🔋 [SmartBattery] Enabled | preferredMoving=$preferredMoving');
+    debugPrint('[SmartBattery] Enabled | preferredMoving=$preferredMoving');
 
     // Lắng nghe sự kiện pin do OS phát ra (charge/discharge/full).
     _batteryStateSub = _battery.onBatteryStateChanged.listen(_onBatteryStateChanged);
@@ -169,7 +169,7 @@ class SmartBatteryManager {
     _straightSeconds = 0;
     _stationarySeconds = 0;
 
-    debugPrint('🔋 [SmartBattery] Disabled');
+    debugPrint('[SmartBattery] Disabled');
   }
 
   /// Gọi mỗi lần nhận được một GPS location update.
@@ -241,7 +241,7 @@ class SmartBatteryManager {
     if (_straightSeconds >= _kStraightRoadThresholdSec) {
       _clearStraightRoadTimer();
       _setMotionDetail(_MotionDetail.straight);
-      debugPrint('🛣 [SmartBattery] Đường thẳng ${_kStraightRoadThresholdSec}s → switch về preferredProfile');
+      debugPrint('[SmartBattery] Straight road ${_kStraightRoadThresholdSec}s → switch back to preferredProfile');
     }
   }
 
@@ -254,7 +254,7 @@ class SmartBatteryManager {
   void _setMotionDetail(_MotionDetail detail) {
     if (_motionDetail == detail) return;
     _motionDetail = detail;
-    debugPrint('🚗 [SmartBattery] motionDetail → $detail');
+    debugPrint('[SmartBattery] motionDetail → $detail');
     _applyBestProfile();
   }
 
@@ -272,16 +272,16 @@ class SmartBatteryManager {
       final state = await _battery.batteryState;
       _isCharging = state == BatteryState.charging || state == BatteryState.full;
       debugPrint(
-          '🔋 [SmartBattery] level=$_lastBatteryLevel% charging=$_isCharging');
+          '[SmartBattery] level=$_lastBatteryLevel% charging=$_isCharging');
       await _applyBestProfile();
     } catch (e) {
-      debugPrint('🔋 [SmartBattery] batteryLevel check failed: $e');
+      debugPrint('[SmartBattery] batteryLevel check failed: $e');
     }
   }
 
   void _onBatteryStateChanged(BatteryState state) {
     _isCharging = state == BatteryState.charging || state == BatteryState.full;
-    debugPrint('🔋 [SmartBattery] OS battery state → $state | charging=$_isCharging');
+    debugPrint('[SmartBattery] OS battery state → $state | charging=$_isCharging');
     // Đọc lại mức pin ngay khi OS báo state thay đổi (charging plugged/unplugged,
     // hoặc full). Đây là cách duy nhất cập nhật _lastBatteryLevel sau khi timer
     // polling bị loại bỏ.
@@ -293,7 +293,7 @@ class SmartBatteryManager {
     if (_stationarySeconds >= _stationaryThresholdSec &&
         _vehicleState != VehicleActivityState.stationary) {
       debugPrint(
-          '🚗 [SmartBattery] Xe đứng yên ≥${_stationaryThresholdSec}s → chuyển general');
+          '[SmartBattery] Vehicle stationary >=${_stationaryThresholdSec}s → switching to general');
       _setVehicleState(VehicleActivityState.stationary);
     }
   }
@@ -301,7 +301,7 @@ class SmartBatteryManager {
   void _setVehicleState(VehicleActivityState newState) {
     if (_vehicleState == newState) return;
     _vehicleState = newState;
-    debugPrint('🚗 [SmartBattery] vehicleState → $newState');
+    debugPrint('[SmartBattery] vehicleState → $newState');
     _applyBestProfile();
   }
 
@@ -337,7 +337,7 @@ class SmartBatteryManager {
     if (newProfile == _currentProfile) return;
     _currentProfile = newProfile;
 
-    debugPrint('🔋 [SmartBattery] → Apply profile=$newProfile '
+    debugPrint('[SmartBattery] Apply profile=$newProfile '
         '(battery=$_lastBatteryLevel% charging=$_isCharging '
         'vehicleState=$_vehicleState)');
 
@@ -349,7 +349,7 @@ class SmartBatteryManager {
     // Khi general + có custom override → app tự apply config, bỏ qua native preset
     if (newProfile == SmartBatteryProfile.general &&
         customGeneralConfigOverride != null) {
-      debugPrint('🔋 [SmartBattery] general + customOverride → delegate to app');
+      debugPrint('[SmartBattery] general + customOverride → delegate to app');
       await customGeneralConfigOverride!();
       return;
     }
@@ -377,9 +377,9 @@ class SmartBatteryManager {
         preset: presetName,
       );
 
-      debugPrint('✅ [SmartBattery] Native config applied: $presetName');
+      debugPrint('[SmartBattery] Native config applied: $presetName');
     } catch (e) {
-      debugPrint('⚠️ [SmartBattery] applyNativeConfig error: $e');
+      debugPrint('[SmartBattery] applyNativeConfig error: $e');
     }
   }
 }

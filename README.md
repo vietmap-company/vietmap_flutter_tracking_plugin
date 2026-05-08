@@ -71,7 +71,7 @@ allprojects {
 </array>
 ```
 
-### 3. Background Task Identifiers (iOS 13+)
+### 3. Background Task Identifiers (iOS 15+)
 
 ```xml
 <key>BGTaskSchedulerPermittedIdentifiers</key>
@@ -149,8 +149,7 @@ await controller.requestAlwaysLocationPermissions();
 ```dart
 await controller.startTracking(
   LocationTrackingConfig(
-    intervalMs: 10000,
-    distanceFilter: 10.0,
+    intervalMs: 30000,
     accuracy: LocationAccuracy.high,
     backgroundMode: true,
     notificationTitle: 'GPS Tracking Active',
@@ -246,22 +245,63 @@ plugin.onTtsText.listen((String text) => print('TTS: \$text'));
 
 ## Tracking Modes
 
-Pass `null` for either `intervalMs` or `distanceFilter` to let the native SDK use its own optimised defaults.
+`LocationTrackingConfig` supports two mutually exclusive tracking strategies.
+Pass **only one** of `intervalMs` or `distanceFilter`; set the other to `null`.
 
 | Mode | `intervalMs` | `distanceFilter` | Behaviour |
 |------|-------------|------------------|-----------|
-| SDK defaults | `null` | `null` | Native SDK decides — best battery/accuracy balance |
-| Timer-only | `> 0` | `null` / `0` | Fixed-interval updates regardless of movement |
-| Movement-only | `null` / `0` | `> 0` | Update only after travelling minimum distance |
-| Hybrid | `> 0` | `> 0` | Whichever trigger fires first |
+| **Interval (default)** | `> 0` | `null` | Location update every N milliseconds regardless of movement |
+| **Distance** | `null` | `> 0` | Location update only after the device has moved M metres |
+
+> Setting both to a non-null value is supported but not recommended — the SDK
+> fires on whichever condition is satisfied first, which can produce uneven
+> data density and unexpected battery usage.
+
+### Platform implementation details
+
+**Android**
+- *Interval mode* — `FusedLocationProviderClient` is configured with
+  `LocationRequest.setInterval(intervalMs)`. No displacement filter is applied.
+- *Distance mode* — `LocationRequest.setSmallestDisplacement(distanceFilter)`
+  is set and `intervalMs` is omitted (SDK default ceiling applies).
+
+**iOS**
+- *Interval mode* — `CLLocationManager` calls `didUpdateLocations`; the bridge
+  timestamps every fix and discards ones that arrive sooner than `intervalMs`
+  since the last accepted fix. `distanceFilter` is set to
+  `kCLDistanceFilterNone`.
+- *Distance mode* — `CLLocationManager.distanceFilter` is set to
+  `distanceFilter` metres. The bridge accepts every callback the OS delivers.
 
 ### Tracking Presets
 
+Presets are grouped into **interval-based** (default) and **distance-based**
+variants. Choose the variant that matches your use case.
+
+#### Interval-based (timer-driven)
+
 ```dart
-TrackingPresets.navigation()   // 3 s / 5 m   — high accuracy
-TrackingPresets.fitness()      // 5 s / 10 m  — outdoor activities
-TrackingPresets.general()      // 10 s / 15 m — balanced
-TrackingPresets.batterySaver() // 30 s / 50 m — maximum conservation
+TrackingPresets.navigation()    // 3 s — high accuracy, real-time vehicle tracking
+TrackingPresets.fitness()       // 5 s — outdoor activities
+TrackingPresets.general()       // 10 s — balanced fleet/delivery tracking
+TrackingPresets.batterySaver()  // 30 s — slow or parked assets
+```
+
+#### Distance-based (movement-driven)
+
+```dart
+TrackingPresets.navigationDistance()   // every 5 m  — dense route points
+TrackingPresets.fitnessDistance()      // every 10 m — outdoor activities
+TrackingPresets.generalDistance()      // every 30 m — general tracking
+TrackingPresets.batterySaverDistance() // every 100 m — maximum conservation
+```
+
+To attach user identifiers to a preset, use `copyWith()`:
+
+```dart
+await controller.startTracking(
+  TrackingPresets.general().copyWith(userId: 'user-123'),
+);
 ```
 
 ---

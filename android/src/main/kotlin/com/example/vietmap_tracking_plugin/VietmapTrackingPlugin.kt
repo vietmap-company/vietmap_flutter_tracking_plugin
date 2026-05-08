@@ -189,9 +189,9 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     val cached = vietmapSDK.getCachedLocationsCount()
                     val isOnline = vietmapSDK.isNetworkAvailable()
                     if (!isOnline) {
-                        Log.d("VietmapSync", "💾 OFFLINE → SDK queued | pending=$cached")
+                        Log.d("VietmapSync", "OFFLINE → SDK queued | pending=$cached")
                     } else if (cached > 0) {
-                        Log.d("VietmapSync", "⏫ SDK uploading | pending=$cached")
+                        Log.d("VietmapSync", "SDK uploading | pending=$cached")
                     }
                 } catch (_: Exception) {}
 
@@ -266,36 +266,36 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 override fun onAvailable(network: Network) {
                     try {
                         val cached = vietmapSDK.getCachedLocationsCount()
-                        Log.i(tag, "🟢 Network RESTORED | pendingRecords=$cached")
+                        Log.i(tag, "Network RESTORED | pendingRecords=$cached")
                         if (cached > 0) {
-                            Log.i(tag, "⏫ Triggering SDK uploadCachedLocationsManually ($cached records)...")
+                            Log.i(tag, "Triggering SDK uploadCachedLocationsManually ($cached records)...")
                             vietmapSDK.uploadCachedLocationsManually()
                             // Log kết quả sau 3s
                             mainHandler.postDelayed({
                                 try {
                                     val remaining = vietmapSDK.getCachedLocationsCount()
-                                    Log.i(tag, "✅ After manual upload | remaining=$remaining")
+                                    Log.i(tag, "After manual upload | remaining=$remaining")
                                 } catch (_: Exception) {}
                             }, 3000L)
                         }
                     } catch (e: Exception) {
-                        Log.i(tag, "🟢 Network RESTORED (cache check failed: ${e.message})")
+                        Log.i(tag, "Network RESTORED (cache check failed: ${e.message})")
                     }
                 }
 
                 override fun onLost(network: Network) {
                     try {
                         val cached = vietmapSDK.getCachedLocationsCount()
-                        Log.w(tag, "🔴 Network LOST | cachedSoFar=$cached")
+                        Log.w(tag, "Network LOST | cachedSoFar=$cached")
                     } catch (_: Exception) {
-                        Log.w(tag, "🔴 Network LOST")
+                        Log.w(tag, "Network LOST")
                     }
                 }
             }
             cm.registerNetworkCallback(request, networkCallback!!)
-            Log.d(tag, "✅ Network monitor registered")
+            Log.d(tag, "Network monitor registered")
         } catch (e: Exception) {
-            Log.w(tag, "⚠️ Could not setup network monitor: ${e.message}")
+            Log.w(tag, "Could not setup network monitor: ${e.message}")
         }
     }
 
@@ -834,8 +834,8 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 this.userId = userId
                 this.vehicleId = vehicleId
 
-                Log.d("VietmapTrackingPlugin", "🚀 startTracking | interval=${intervalMs}ms distance=${distanceFilter}m bg=$backgroundMode mock=$allowMockLocation")
-                Log.d("VietmapTrackingPlugin", "🆔 user=$userId vehicle=$vehicleId")
+                Log.d("VietmapTrackingPlugin", "startTracking | interval=${intervalMs}ms distance=${distanceFilter}m bg=$backgroundMode mock=$allowMockLocation")
+                Log.d("VietmapTrackingPlugin", "user=$userId vehicle=$vehicleId")
 
                 // Update configuration with allowMockLocation
                 try {
@@ -856,12 +856,12 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                         )
                         vietmapSDK.setTrackingConfig(config)
                     } else {
-                        Log.d("VietmapTrackingPlugin", "ℹ️ Using SDK default tracking config (interval/distance not provided)")
+                        Log.d("VietmapTrackingPlugin", "Using SDK default tracking config (interval/distance not provided)")
                         // Even if we don't set the full config, we might want to set the mock policy if the SDK allows it separately
                         // For now based on TrackingConfig constructor 1.0.4, it's bundled.
                     }
                 } catch (e: Exception) {
-                    Log.w("VietmapTrackingPlugin", "⚠️ setTrackingConfig(TrackingConfig) failed: ${e.message}")
+                    Log.w("VietmapTrackingPlugin", "setTrackingConfig(TrackingConfig) failed: ${e.message}")
                 }
 
                 // Set metadata — must happen before startTracking()
@@ -884,12 +884,12 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 }
                 vietmapSDK.startTracking()
                 trackingStartTime = System.currentTimeMillis()
-                Log.d("VietmapTrackingPlugin", "✅ startTracking() dispatched — config sẽ được apply bởi SmartBatteryManager sau 6s")
+                Log.d("VietmapTrackingPlugin", "startTracking() dispatched")
 
                 result.success(true)
 
             } catch (e: Exception) {
-                Log.e("VietmapTrackingPlugin", "❌ Error starting tracking: ${e.message}", e)
+                Log.e("VietmapTrackingPlugin", "Error starting tracking: ${e.message}", e)
                 result.success(false)
             }
         }
@@ -1082,7 +1082,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
                 Log.d(
                     "VietmapTrackingPlugin",
-                    "📜 getTrackingHistory | userId=$userId from=$fromTime to=$toTime page=$pageNumber size=$pageSize desc=$sortDescending"
+                    "getTrackingHistory | userId=$userId from=$fromTime to=$toTime page=$pageNumber size=$pageSize desc=$sortDescending"
                 )
 
                 vietmapSDK.getHistory(
@@ -1146,7 +1146,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 val userBgArg = args?.get("backgroundMode") as? Boolean
                 if (userBgArg == false) {
                     vietmapSDK.setEnhancedBackgroundMode(false)
-                    Log.d("VietmapTrackingPlugin", "🔕 Background mode explicitly disabled by user")
+                    Log.d("VietmapTrackingPlugin", "Background mode explicitly disabled by user")
                 }
 
                 result.success(true)
@@ -1293,7 +1293,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             smartBatteryPreset = preset
 
             val tag = "VietmapBattery"
-            Log.i(tag, "🔋 setSmartBatteryConfig | enabled=$enabled preset=$preset")
+            Log.i(tag, "setSmartBatteryConfig | enabled=$enabled preset=$preset")
 
             // Use safeUpdateTrackingConfig (reflection) to avoid SDK's setDistanceFilter()
             // which internally does stopTracking()+startTracking() and restarts the
@@ -1303,26 +1303,26 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 when (preset) {
                     "navigation" -> {
                         safeUpdateTrackingConfig(3000L, 5.0)
-                        Log.i(tag, "🚗 Preset=navigation | interval=3s distance=5m")
+                        Log.i(tag, "Preset=navigation | interval=3s distance=5m")
                     }
                     "batterySaver" -> {
                         safeUpdateTrackingConfig(30000L, 50.0)
-                        Log.i(tag, "🔋 Preset=batterySaver | interval=30s distance=50m")
+                        Log.i(tag, "Preset=batterySaver | interval=30s distance=50m")
                     }
                     else -> {
                         safeUpdateTrackingConfig(10000L, 15.0)
-                        Log.i(tag, "⚙️ Preset=general | interval=10s distance=15m")
+                        Log.i(tag, "Preset=general | interval=10s distance=15m")
                     }
                 }
-                Log.i(tag, "✅ TrackingConfig applied for preset=$preset")
+                Log.i(tag, "TrackingConfig applied for preset=$preset")
             } else if (!enabled && vietmapSDK.isTracking()) {
                 safeUpdateTrackingConfig(5000L, 10.0)
-                Log.i(tag, "✅ SmartBattery disabled → restored default config")
+                Log.i(tag, "SmartBattery disabled: restored default config")
             }
 
             result.success(true)
         } catch (e: Exception) {
-            Log.e("VietmapBattery", "❌ setSmartBatteryConfig error: ${e.message}")
+            Log.e("VietmapBattery", "setSmartBatteryConfig error: ${e.message}")
             result.error("SMART_BATTERY_ERROR", e.message, null)
         }
     }
@@ -1491,11 +1491,11 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             // 3. DO NOT touch enhancedBackgroundMode — it's already set at startTracking()
             //    and must not be changed mid-tracking to avoid startBackgroundService() calls.
 
-            Log.d(tag, "✅ safeUpdateTrackingConfig | interval=${intervalMs}ms distance=${distanceFilter}m")
+            Log.d(tag, "safeUpdateTrackingConfig | interval=${intervalMs}ms distance=${distanceFilter}m")
         } catch (e: Exception) {
             // Fallback: if reflection fails (SDK updated, fields renamed, etc.),
             // log a warning. Do NOT fall back to setTrackingConfig() as that would crash.
-            Log.e(tag, "❌ safeUpdateTrackingConfig reflection failed: ${e.message}", e)
+            Log.e(tag, "safeUpdateTrackingConfig reflection failed: ${e.message}", e)
         }
     }
 
@@ -1525,7 +1525,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private fun handleSetFakeGPSPolicy(call: MethodCall, result: Result) {
         try {
             val policy = call.argument<String>("policy") ?: "skip"
-            Log.d("VietmapTracking", "⚙️ setFakeGPSPolicy: $policy")
+            Log.d("VietmapTracking", "setFakeGPSPolicy: $policy")
             vietmapSDK.setFakeGPSPolicy(policy)
             result.success(null)
         } catch (e: Exception) {

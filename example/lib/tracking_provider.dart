@@ -331,7 +331,7 @@ class TrackingProvider extends ChangeNotifier {
   }
 
   void _onStatus(TrackingStatus status) {
-    debugPrint('🔄 TRACKING STATUS: isTracking=${status.isTracking}');
+    debugPrint('TRACKING STATUS: isTracking=${status.isTracking}');
     trackingStatus = status;
     isTracking = status.isTracking;
     if (!status.isTracking) {
@@ -451,7 +451,7 @@ class TrackingProvider extends ChangeNotifier {
     // preset 'general' lên custom config của user
     if (useCustomConfig) {
       SmartBatteryManager.instance.customGeneralConfigOverride = () async {
-        debugPrint('🔋 [Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)');
+        debugPrint('[Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)');
         await _controller.updateTrackingConfig(activeConfig);
       };
     } else {
@@ -659,7 +659,7 @@ class TrackingProvider extends ChangeNotifier {
     if (isTracking) {
       if (v) {
         SmartBatteryManager.instance.customGeneralConfigOverride = () async {
-          debugPrint('🔋 [Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)');
+          debugPrint('[Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)');
           await _controller.updateTrackingConfig(activeConfig);
         };
       } else {

@@ -18,7 +18,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     private var syncWatchdogTimer: Timer?
     private var lastSdkNetworkStatus: Bool?
     private var manualSyncInProgress: Bool = false
-    private let nativeLogTag = "🍎 [iOSNative]"
+    private let nativeLogTag = "[iOSNative]"
     private var gpsPointCounter: Int = 0
 
     // MARK: - Smart Battery Optimization
@@ -123,16 +123,16 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             let shouldLog = !isOnline || counter <= 3 || counter % 5 == 0
 
             if !isOnline {
-                self.nativeLog("[#\(counter)] 💾 OFFLINE → SDK queued in DB | pending=\(cached) | dbSize=\(dbSize)B")
+                self.nativeLog("[#\(counter)] OFFLINE → SDK queued in DB | pending=\(cached) | dbSize=\(dbSize)B")
             } else if counter <= 3 {
-                self.nativeLog("[#\(counter)] 🆕 SDK uploading (initial) | pending=\(cached) | dbSize=\(dbSize)B")
+                self.nativeLog("[#\(counter)] SDK uploading (initial) | pending=\(cached) | dbSize=\(dbSize)B")
             } else if counter % 5 == 0 {
-                self.nativeLog("[#\(counter)] ✅ SDK uploading | pending=\(cached) | dbSize=\(dbSize)B")
+                self.nativeLog("[#\(counter)] SDK uploading | pending=\(cached) | dbSize=\(dbSize)B")
             }
 
             if shouldLog {
-                self.nativeLog("[#\(counter)] 📍 Data: lat=\(lat) lng=\(lng) speed=\(speed) heading=\(heading) accuracy=\(accuracy) ts=\(ts)")
-                self.nativeLog("[#\(counter)] 🆔 IDs: deviceId=\(devId) userId=\(uid) vehicleId=\(vid)")
+                self.nativeLog("[#\(counter)] Data: lat=\(lat) lng=\(lng) speed=\(speed) heading=\(heading) accuracy=\(accuracy) ts=\(ts)")
+                self.nativeLog("[#\(counter)] IDs: deviceId=\(devId) userId=\(uid) vehicleId=\(vid)")
             }
 
             // Forward to Flutter EventChannel
@@ -148,7 +148,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         trackingManager.onError = { [weak self] errorMessage in
             guard let self = self else { return }
-            self.nativeLog("❌ SDK Error: \(errorMessage)")
+            self.nativeLog("SDK Error: \(errorMessage)")
             self.locationStreamHandler.send(event: [
                 "error": errorMessage,
                 "timestamp": Int(Date().timeIntervalSince1970 * 1000)
@@ -182,7 +182,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         trackingManager.onFakeGPSDetected = { [weak self] payload in
             guard let self = self else { return }
             guard let dict = payload as? [String: Any] else { return }
-            self.nativeLog("⚠️ FakeGPS detected: \(dict)")
+            self.nativeLog("FakeGPS detected: \(dict)")
             // MUST dispatch to main thread — FlutterMethodChannel is not thread-safe
             DispatchQueue.main.async {
                 self.channel?.invokeMethod("onFakeGPSDetected", arguments: dict)
@@ -193,7 +193,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         // Current SDK build in this workspace does not expose
         // `onSpeedSignUpdate` / `onTtsAlert` on VietmapAlertBridge,
         // so keep channels alive but skip binding to avoid compile errors.
-        nativeLog("ℹ️ VietmapAlertBridge callbacks are unavailable in current SDK build")
+        nativeLog("VietmapAlertBridge callbacks are unavailable in current SDK build")
 
         nativeLog("=======End Setup SDK Callbacks=======")
     }
@@ -213,7 +213,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
     // MARK: - FlutterPlugin Methods
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-        nativeLog("📩 Method call: \(call.method)")
+        nativeLog("Method call: \(call.method)")
         switch call.method {
         case "configureTracking":
             configureTracking(call, result: result)
@@ -312,7 +312,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         self.baseURL = args["baseURL"] as? String
 
         logSection("Configure SDK")
-        nativeLog("⚙️ configure | apiKey=\(apiKey.prefix(10))... baseURL=\(self.baseURL ?? "nil")")
+        nativeLog("configure | apiKey=\(apiKey.prefix(10))... baseURL=\(self.baseURL ?? "nil")")
         defer { logSection("Configure SDK", end: true) }
 
         // Dùng initialize(apiKey:baseURL:) nếu có baseURL — atomic, tránh race condition
@@ -325,7 +325,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         trackingManager.setAutoUpload(enabled: true)
         isInitialized = true
-        nativeLog("✅ configure success | autoUpload=true")
+        nativeLog("configure success | autoUpload=true")
 
         // ── Sync Logger: setup network monitor + retention callback ──
         setupSyncLogger()
@@ -349,20 +349,20 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
                        selector: #selector(appWillEnterForeground),
                        name: UIApplication.willEnterForegroundNotification,
                        object: nil)
-        nativeLog("📱 [Lifecycle] NotificationCenter observers registered")
+        nativeLog("[Lifecycle] NotificationCenter observers registered")
         logSection("Register Lifecycle Observers", end: true)
     }
 
     @objc private func appDidEnterBackground() {
         logSection("Lifecycle: App Background")
-        nativeLog("📱 [Lifecycle] appDidEnterBackground → SDK.onAppBackground()")
+        nativeLog("[Lifecycle] appDidEnterBackground → SDK.onAppBackground()")
         trackingManager.onAppBackground()
         logSection("Lifecycle: App Background", end: true)
     }
 
     @objc private func appWillEnterForeground() {
         logSection("Lifecycle: App Foreground")
-        nativeLog("📱 [Lifecycle] appWillEnterForeground → SDK.onAppForeground()")
+        nativeLog("[Lifecycle] appWillEnterForeground → SDK.onAppForeground()")
         trackingManager.onAppForeground()
         logSection("Lifecycle: App Foreground", end: true)
         // SDK's appWillEnterForeground already calls restartNetworkMonitor() internally.
@@ -371,7 +371,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             guard let self = self else { return }
             let pending = self.trackingManager.getCachedLocationsCount()
             let sdkNetwork = self.trackingManager.isNetworkConnected()
-            self.nativeLog("📱 [Lifecycle] Post-foreground | sdkNetwork=\(sdkNetwork) pending=\(pending)")
+            self.nativeLog("[Lifecycle] Post-foreground | sdkNetwork=\(sdkNetwork) pending=\(pending)")
             if sdkNetwork && pending > 0 {
                 self.triggerManualSync(reason: "foreground-return")
             }
@@ -399,7 +399,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     private func startSyncWatchdog() {
         syncWatchdogTimer?.invalidate()
         lastSdkNetworkStatus = trackingManager.isNetworkConnected()
-        nativeLog("👀 [SYNC] Watchdog started | sdkNetwork=\(lastSdkNetworkStatus ?? false)")
+        nativeLog("[SYNC] Watchdog started | sdkNetwork=\(lastSdkNetworkStatus ?? false)")
 
         syncWatchdogTimer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
             guard let self = self else { return }
@@ -409,13 +409,13 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             let previous = self.lastSdkNetworkStatus
 
             if previous != sdkNetwork {
-                self.nativeLog("🔁 [SYNC] Watchdog network transition | sdk: \(previous.map(String.init(describing:)) ?? "nil") -> \(sdkNetwork)")
+                self.nativeLog("[SYNC] Watchdog network transition | sdk: \(previous.map(String.init(describing:)) ?? "nil") -> \(sdkNetwork)")
                 self.lastSdkNetworkStatus = sdkNetwork
             }
 
             // Key scenario: offline -> online nhưng NWPathMonitor callback không chạy.
             if previous == false && sdkNetwork == true {
-                self.nativeLog("🟢 [SYNC] Watchdog detected reconnect | pending=\(pending)")
+                self.nativeLog("[SYNC] Watchdog detected reconnect | pending=\(pending)")
                 self.triggerManualSync(reason: "watchdog-reconnect")
                 return
             }
@@ -426,17 +426,17 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
                 self.probeRealConnectivity { [weak self] isReallyOnline in
                     guard let self = self else { return }
                     if isReallyOnline {
-                        self.nativeLog("⚠️ [SYNC] Watchdog MISMATCH: probe=online but SDK=offline | pending=\(pending) → refreshNetworkStatus")
+                        self.nativeLog("[SYNC] Watchdog MISMATCH: probe=online but SDK=offline | pending=\(pending) → refreshNetworkStatus")
                         self.trackingManager.refreshNetworkStatus()
                         // Sau khi refresh, đợi monitor fire (1s) rồi trigger sync
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { [weak self] in
                             guard let self = self else { return }
                             self.lastSdkNetworkStatus = self.trackingManager.isNetworkConnected()
-                            self.nativeLog("🔍 [SYNC] Post-refresh SDK state | sdkNetwork=\(self.lastSdkNetworkStatus ?? false)")
+                            self.nativeLog("[SYNC] Post-refresh SDK state | sdkNetwork=\(self.lastSdkNetworkStatus ?? false)")
                             self.triggerManualSync(reason: "watchdog-mismatch-fixed")
                         }
                     } else {
-                        self.nativeLog("🔴 [SYNC] Watchdog confirmed offline | pending=\(pending)")
+                        self.nativeLog("[SYNC] Watchdog confirmed offline | pending=\(pending)")
                     }
                 }
                 return
@@ -444,7 +444,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
             // Safety net: nếu đang online và vẫn còn pending thì thử trigger sync định kỳ.
             if sdkNetwork && pending > 0 {
-                self.nativeLog("⏱ [SYNC] Watchdog online with pending | pending=\(pending) -> trigger sync")
+                self.nativeLog("[SYNC] Watchdog online with pending | pending=\(pending) -> trigger sync")
                 self.triggerManualSync(reason: "watchdog-online-pending")
             }
         }
@@ -468,16 +468,16 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
     private func triggerManualSync(reason: String) {
         if manualSyncInProgress {
-            nativeLog("⏳ [SYNC] Skip manual sync (in-progress) | reason=\(reason)")
+            nativeLog("[SYNC] Skip manual sync (in-progress) | reason=\(reason)")
             return
         }
 
         let pendingBefore = trackingManager.getCachedLocationsCount()
         let dbBefore = trackingManager.getDatabaseSizeBytes()
-        nativeLog("⏫ [SYNC] Trigger manual sync | reason=\(reason) pending=\(pendingBefore) dbSize=\(dbBefore)B")
+        nativeLog("[SYNC] Trigger manual sync | reason=\(reason) pending=\(pendingBefore) dbSize=\(dbBefore)B")
 
         guard pendingBefore > 0 else {
-            nativeLog("✅ [SYNC] Skip manual sync (no pending) | reason=\(reason)")
+            nativeLog("[SYNC] Skip manual sync (no pending) | reason=\(reason)")
             return
         }
 
@@ -487,7 +487,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             self.manualSyncInProgress = false
             let pendingAfter = self.trackingManager.getCachedLocationsCount()
             let dbAfter = self.trackingManager.getDatabaseSizeBytes()
-            self.nativeLog("📤 [SYNC] Manual sync callback | reason=\(reason) success=\(success) msg=\(message ?? "nil") pending=\(pendingAfter) dbSize=\(dbAfter)B")
+            self.nativeLog("[SYNC] Manual sync callback | reason=\(reason) success=\(success) msg=\(message ?? "nil") pending=\(pendingAfter) dbSize=\(dbAfter)B")
             self.scheduleCacheSnapshot("sync-\(reason)", after: 2)
             self.scheduleCacheSnapshot("sync-\(reason)", after: 10)
         }
@@ -510,13 +510,13 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let baseURL = args["trackingBaseUrl"] as? String ?? "https://live.fleetwork.vn/api/v1"
 
         logSection("Initialize Tracking")
-        nativeLog("🔑 initializeTracking | apiKey=\(apiKey.prefix(10))... baseURL=\(baseURL)")
+        nativeLog("initializeTracking | apiKey=\(apiKey.prefix(10))... baseURL=\(baseURL)")
 
         trackingManager.initializeWithValidation(apiKey: apiKey, baseURL: baseURL) { [weak self] error in
             guard let self = self else { return }
             if let error = error {
                 let nsError = error as NSError
-                self.nativeLog("❌ initializeTracking failed: \(nsError.localizedDescription)")
+                self.nativeLog("initializeTracking failed: \(nsError.localizedDescription)")
                 result(FlutterError(code: "INVALID_API_KEY",
                                    message: nsError.localizedDescription,
                                    details: nil))
@@ -525,7 +525,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
                 self.baseURL = baseURL
                 self.isInitialized = true
                 self.setupSyncLogger()
-                self.nativeLog("✅ initializeTracking success")
+                self.nativeLog("initializeTracking success")
                 result(nil)
             }
             self.logSection("Initialize Tracking", end: true)
@@ -543,7 +543,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
                                details: nil))
             return
         }
-        nativeLog("📎 setMetadata | keys=\(metadata.keys.sorted())")
+        nativeLog("setMetadata | keys=\(metadata.keys.sorted())")
         trackingManager.setMetadata(metadata as NSDictionary)
         result(nil)
     }
@@ -580,7 +580,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let authModeStr = args["authMode"] as? String ?? "header"
         let authMode: VMAuthMode = (authModeStr.lowercased() == "queryparam") ? .queryParam : .header
         trackingManager.configure(authMode: authMode)
-        nativeLog("ℹ️ authMode=\(authModeStr) applied via configure(authMode:)")
+        nativeLog("authMode=\(authModeStr) applied via configure(authMode:)")
 
         let autoUpload = args["autoUpload"] as? Bool ?? true
         trackingManager.setAutoUpload(enabled: autoUpload)
@@ -588,7 +588,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         isInitialized = true
         setupSyncLogger()
 
-        nativeLog("✅ configureTracking OK | authMode=\(authModeStr) autoUpload=\(autoUpload)")
+        nativeLog("configureTracking OK | authMode=\(authModeStr) autoUpload=\(autoUpload)")
         result(true)
     }
 
@@ -615,7 +615,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         let supported = VietmapTrackingWrapper.shared.configureZoneNetworkV2(baseUrl: baseUrl)
         if !supported {
-            nativeLog("⚠️ configureZoneNetworkV2 is unavailable in current VietmapTrackingSDK build")
+            nativeLog("configureZoneNetworkV2 is unavailable in current VietmapTrackingSDK build")
         }
         result(supported)
     }
@@ -634,7 +634,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
         let supported = VietmapTrackingWrapper.shared.resetZoneNetworkV2()
         if !supported {
-            nativeLog("⚠️ resetZoneNetworkV2 is unavailable in current VietmapTrackingSDK build")
+            nativeLog("resetZoneNetworkV2 is unavailable in current VietmapTrackingSDK build")
         }
         result(supported)
     }
@@ -785,17 +785,17 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         // Determine trigger mode: SDK supports only ONE trigger mechanism
         let triggerMode: String
         if let interval = intervalMsInput, interval > 0, (distanceFilterInput == nil || distanceFilterInput! <= 0) {
-            triggerMode = "⏱ TIMER ONLY (interval=\(interval)ms)"
+            triggerMode = "TIMER ONLY (interval=\(interval)ms)"
         } else if let distance = distanceFilterInput, distance > 0, (intervalMsInput == nil || intervalMsInput! <= 0) {
-            triggerMode = "📏 DISTANCE ONLY (distance=\(distance)m)"
+            triggerMode = "DISTANCE ONLY (distance=\(distance)m)"
         } else if intervalMsInput == nil && distanceFilterInput == nil {
-            triggerMode = "ℹ️ SDK DEFAULTS (No values passed to SDK)"
+            triggerMode = "SDK DEFAULTS (No values passed to SDK)"
         } else {
-            triggerMode = "⚠️ BOTH (interval=\(intervalMs)ms + distance=\(distanceFilter)m)"
+            triggerMode = "BOTH (interval=\(intervalMs)ms + distance=\(distanceFilter)m)"
         }
 
-        nativeLog("🚀 startTracking | bg=\(backgroundMode) \(triggerMode) mock=\(allowMockLocation) smartBattery=\(smartBatteryEnabled)")
-        nativeLog("🆔 ids | userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
+        nativeLog("startTracking | bg=\(backgroundMode) \(triggerMode) mock=\(allowMockLocation) smartBattery=\(smartBatteryEnabled)")
+        nativeLog("ids | userId=\(userId ?? "nil") vehicleId=\(vehicleId ?? "nil")")
 
         // ── Fake GPS Toggle ──
         // allowMockLocation=true  → SDK lets fake GPS pass through (no detection).
@@ -804,7 +804,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         if !allowMockLocation {
             trackingManager.setFakeGPSPolicy(currentFakeGpsPolicy)
         }
-        nativeLog("🕵️ [FakeGPS] allowMockLocation=\(allowMockLocation) policy='\(allowMockLocation ? "n/a (pass-through)" : currentFakeGpsPolicy)'")
+        nativeLog("[FakeGPS] allowMockLocation=\(allowMockLocation) policy='\(allowMockLocation ? "n/a (pass-through)" : currentFakeGpsPolicy)'")
 
         // ── iOS Battery Optimization via CoreLocation ──
         if let vid = vehicleId, !vid.isEmpty {
@@ -851,9 +851,9 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        nativeLog("🛑 stopTracking called")
+        nativeLog("stopTracking called")
         trackingManager.stopTracking { [weak self] success, message in
-            self?.nativeLog("🏁 stopTracking result | success=\(success) message=\(message ?? "nil")")
+            self?.nativeLog("stopTracking result | success=\(success) message=\(message ?? "nil")")
             DispatchQueue.main.async {
                 if success {
                     result(true)
@@ -930,7 +930,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             return
         }
 
-        nativeLog("📜 getTrackingHistory | userId=\(userId) from=\(fromTime) to=\(toTime) page=\(pageNumber) size=\(pageSize) desc=\(sortDescending)")
+        nativeLog("getTrackingHistory | userId=\(userId) from=\(fromTime) to=\(toTime) page=\(pageNumber) size=\(pageSize) desc=\(sortDescending)")
 
         trackingManager.getHistory(
             userId: userId,
@@ -940,7 +940,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             pageSize: pageSize,
             sortDescending: sortDescending
         ) { [weak self] historyJson, errorCode, errorMessage in
-            self?.nativeLog("📜 getTrackingHistory callback | errorCode=\(errorCode ?? "nil") message=\(errorMessage ?? "nil")")
+            self?.nativeLog("getTrackingHistory callback | errorCode=\(errorCode ?? "nil") message=\(errorMessage ?? "nil")")
             DispatchQueue.main.async {
                 if let errorCode = errorCode {
                     result(FlutterError(
@@ -1014,15 +1014,15 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         // Determine trigger mode
         let triggerMode: String
         if let interval = intervalMsInput, interval > 0, (distanceFilterInput == nil || distanceFilterInput! <= 0) {
-            triggerMode = "⏱ TIMER ONLY"
+            triggerMode = "TIMER ONLY"
         } else if let distance = distanceFilterInput, distance > 0, (intervalMsInput == nil || intervalMsInput! <= 0) {
-            triggerMode = "📏 DISTANCE ONLY"
+            triggerMode = "DISTANCE ONLY"
         } else if intervalMsInput == nil && distanceFilterInput == nil {
-            triggerMode = "ℹ️ SDK DEFAULTS"
+            triggerMode = "SDK DEFAULTS"
         } else {
-            triggerMode = "⚠️ BOTH"
+            triggerMode = "BOTH"
         }
-        nativeLog("⚙️ updateTrackingConfig | \(triggerMode) interval=\(intervalMs)ms distance=\(distanceFilter)m")
+        nativeLog("updateTrackingConfig | \(triggerMode) interval=\(intervalMs)ms distance=\(distanceFilter)m")
         logCacheSnapshot("update-config/before")
 
         // iOS SDK does NOT have setTrackingInterval() / setDistanceFilter() public methods.
@@ -1033,10 +1033,10 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let cachedBefore = trackingManager.getCachedLocationsCount()
 
         if cachedBefore > 0 {
-            nativeLog("⚠️ updateTrackingConfig: \(cachedBefore) pending records will be lost on restart")
+            nativeLog("updateTrackingConfig: \(cachedBefore) pending records will be lost on restart")
             // Try to flush pending records before restart
             trackingManager.uploadCachedLocationsManually { [weak self] success, msg in
-                self?.nativeLog("⏫ Pre-restart flush: success=\(success) msg=\(msg ?? "nil")")
+                self?.nativeLog("Pre-restart flush: success=\(success) msg=\(msg ?? "nil")")
                 self?.logCacheSnapshot("update-config/pre-restart-flush-callback")
             }
         }
@@ -1045,13 +1045,13 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         trackingManager.stopTracking { [weak self] _, _ in
             guard let self = self else { return }
             self.logCacheSnapshot("update-config/after-stop")
-            self.nativeLog("🔄 updateTrackingConfig: stopped, restarting with new config...")
+            self.nativeLog("updateTrackingConfig: stopped, restarting with new config...")
             self.trackingManager.startTracking(
                 enhancedBackgroundMode: backgroundMode,
                 intervalMs: intervalMsInput.map { NSNumber(value: $0) },
                 distanceFilter: distanceFilterInput.map { NSNumber(value: $0) }
             ) { [weak self] success, message in
-                self?.nativeLog("✅ updateTrackingConfig restart | success=\(success) msg=\(message ?? "nil")")
+                self?.nativeLog("updateTrackingConfig restart | success=\(success) msg=\(message ?? "nil")")
                 self?.logCacheSnapshot("update-config/restart-callback")
                 self?.scheduleCacheSnapshot("update-config/post-restart", after: 2)
                 self?.scheduleCacheSnapshot("update-config/post-restart", after: 10)
@@ -1129,18 +1129,18 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let enabled = args?["enabled"] as? Bool ?? false
         let preset = args?["preset"] as? String ?? "general"
         smartBatteryEnabled = enabled
-        nativeLog("🔋 setSmartBatteryConfig | enabled=\(enabled) preset=\(preset)")
+        nativeLog("setSmartBatteryConfig | enabled=\(enabled) preset=\(preset)")
         // Nếu đang tracking, áp dụng ngay
         if trackingManager.isTrackingActive() {
             let clm = CLLocationManager()
             if enabled {
                 clm.activityType = .automotiveNavigation
                 clm.pausesLocationUpdatesAutomatically = true
-                nativeLog("🔋 [SmartBattery] Applied LIVE: automotiveNavigation + pausesAuto=true")
+                nativeLog("[SmartBattery] Applied LIVE: automotiveNavigation + pausesAuto=true")
             } else {
                 clm.activityType = .other
                 clm.pausesLocationUpdatesAutomatically = false
-                nativeLog("🔋 [SmartBattery] Applied LIVE: .other + pausesAuto=false")
+                nativeLog("[SmartBattery] Applied LIVE: .other + pausesAuto=false")
             }
         }
         result(true)
@@ -1155,7 +1155,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let args = call.arguments as? [String: Any]
         let policy = args?["policy"] as? String ?? "skip"
         currentFakeGpsPolicy = policy
-        nativeLog("⚙️ setFakeGPSPolicy: \(policy) (stored and applied to SDK immediately)")
+        nativeLog("setFakeGPSPolicy: \(policy) (stored and applied to SDK immediately)")
         trackingManager.setFakeGPSPolicy(policy)
         result(nil)
     }
@@ -1187,7 +1187,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let accuracy = args["accuracy"] as? Double ?? 0.0
         let altitude = args["altitude"] as? Double ?? 0.0
         let timestamp = args["timestamp"] as? Int ?? Int(Date().timeIntervalSince1970 * 1000)
-        nativeLog("🛰️ processExternalLocation | lat=\(lat) lng=\(lng) speed=\(speed) heading=\(heading) accuracy=\(accuracy) altitude=\(altitude) timestamp=\(timestamp)")
+        nativeLog("processExternalLocation | lat=\(lat) lng=\(lng) speed=\(speed) heading=\(heading) accuracy=\(accuracy) altitude=\(altitude) timestamp=\(timestamp)")
         trackingManager.processExternalLocation(
             lat: lat, lng: lng, speed: speed, heading: heading,
             // accuracy: accuracy, altitude: altitude, timestamp: timestamp
@@ -1199,23 +1199,23 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
 
     private func getCachedLocationsCount(result: @escaping FlutterResult) {
         let count = trackingManager.getCachedLocationsCount()
-        nativeLog("📦 getCachedLocationsCount | count=\(count)")
+        nativeLog("getCachedLocationsCount | count=\(count)")
         logCacheSnapshot("method/getCachedLocationsCount")
         result(count)
     }
 
     private func getDatabaseSizeBytes(result: @escaping FlutterResult) {
         let size = trackingManager.getDatabaseSizeBytes()
-        nativeLog("🗄️ getDatabaseSizeBytes | size=\(size)B")
+        nativeLog("getDatabaseSizeBytes | size=\(size)B")
         logCacheSnapshot("method/getDatabaseSizeBytes")
         result(size)
     }
 
     private func uploadCachedLocationsManually(result: @escaping FlutterResult) {
-        nativeLog("📤 uploadCachedLocationsManually called")
+        nativeLog("uploadCachedLocationsManually called")
         logCacheSnapshot("manual-upload/before")
         trackingManager.uploadCachedLocationsManually { [weak self] success, message in
-            self?.nativeLog("📤 uploadCachedLocationsManually result | success=\(success) message=\(message ?? "nil")")
+            self?.nativeLog("uploadCachedLocationsManually result | success=\(success) message=\(message ?? "nil")")
             self?.logCacheSnapshot("manual-upload/callback")
             self?.scheduleCacheSnapshot("manual-upload/post", after: 2)
             DispatchQueue.main.async { result(success) }
@@ -1227,7 +1227,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let before = trackingManager.getCachedLocationsCount()
         trackingManager.clearCachedLocations()
         let after = trackingManager.getCachedLocationsCount()
-        nativeLog("🧹 clearCachedLocations | before=\(before) after=\(after)")
+        nativeLog("clearCachedLocations | before=\(before) after=\(after)")
         logCacheSnapshot("clear-cache/after")
         result(true)
     }
@@ -1243,7 +1243,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let finalMaxRecords = maxRecords > 0 ? maxRecords : 10_000
         let finalMaxDbSize: Int64 = maxDbSizeBytes > 0 ? maxDbSizeBytes : 52_428_800 // 50 MB
         let finalBatchSize = batchSize > 0 ? batchSize : 50
-        nativeLog("💾 configureCacheLimits | maxRecords=\(finalMaxRecords) maxDbSize=\(finalMaxDbSize) batchSize=\(finalBatchSize)")
+        nativeLog("configureCacheLimits | maxRecords=\(finalMaxRecords) maxDbSize=\(finalMaxDbSize) batchSize=\(finalBatchSize)")
         trackingManager.configureCacheLimits(
             maxRecords: finalMaxRecords,
             maxDbSizeBytes: finalMaxDbSize,
@@ -1305,7 +1305,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let dbSize = trackingManager.getDatabaseSizeBytes()
         let network = trackingManager.isNetworkConnected()
         let tracking = trackingManager.isTrackingActive()
-        nativeLog("📊 [CACHE] \(stage) | pending=\(pending) dbSize=\(dbSize)B network=\(network) tracking=\(tracking)")
+        nativeLog("[CACHE] \(stage) | pending=\(pending) dbSize=\(dbSize)B network=\(network) tracking=\(tracking)")
     }
 
     private func scheduleCacheSnapshot(_ stage: String, after seconds: TimeInterval) {
