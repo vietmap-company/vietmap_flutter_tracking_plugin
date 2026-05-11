@@ -554,5 +554,20 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   }
 
   @override
+  Future<void> setFakeGpsNotificationConfig({
+    required String title,
+    required String message,
+  }) async {
+    try {
+      await _channel.invokeMethod<void>(
+        'setFakeGpsNotificationConfig',
+        {'title': title, 'message': message},
+      );
+    } on PlatformException catch (e) {
+      throw Exception('Failed to setFakeGpsNotificationConfig: ${e.message}');
+    }
+  }
+
+  @override
   Stream<FakeGpsEvent> get onFakeGpsDetected => _fakeGpsController.stream;
 }

@@ -371,6 +371,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
             // Fake GPS
             "setFakeGPSPolicy" -> handleSetFakeGPSPolicy(call, result)
+            "setFakeGpsNotificationConfig" -> handleSetFakeGpsNotificationConfig(call, result)
 
             // Platform info
             "getPlatformVersion" -> result.success("Android ${Build.VERSION.RELEASE}")
@@ -829,6 +830,11 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
                 val userId = args?.get("userId") as? String
                 val vehicleId = args?.get("vehicleId") as? String
+
+                if (userId.isNullOrBlank()) {
+                    result.error("MISSING_USER_ID", "userId is required to start tracking", null)
+                    return
+                }
 
                 // Store in instance properties
                 this.userId = userId
@@ -1574,6 +1580,25 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             result.success(null)
         } catch (e: Exception) {
             result.error("FAKE_GPS_POLICY_ERROR", e.message, null)
+        }
+    }
+
+    /**
+     * setFakeGpsNotificationConfig(title: String, message: String)
+     * Customise the title and body of the fake-GPS local notification (shown when policy is "warn").
+     */
+    private fun handleSetFakeGpsNotificationConfig(call: MethodCall, result: Result) {
+        try {
+            val title = call.argument<String>("title")
+            val message = call.argument<String>("message")
+            if (title.isNullOrBlank() || message.isNullOrBlank()) {
+                result.error("INVALID_ARGUMENTS", "title and message are required", null)
+                return
+            }
+            vietmapSDK.setFakeGPSNotificationConfig(title, message)
+            result.success(null)
+        } catch (e: Exception) {
+            result.error("FAKE_GPS_NOTIFICATION_CONFIG_ERROR", e.message, null)
         }
     }
 

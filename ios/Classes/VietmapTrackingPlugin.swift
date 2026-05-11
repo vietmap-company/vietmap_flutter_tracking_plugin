@@ -287,6 +287,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             getDatabaseSizeBytes(result: result)
         case "setFakeGPSPolicy":
             setFakeGPSPolicy(call, result: result)
+        case "setFakeGpsNotificationConfig":
+            setFakeGPSNotificationConfig(call, result: result)
         case "onAppBackground":
             trackingManager.onAppBackground(); result(nil)
         case "onAppForeground":
@@ -777,6 +779,12 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let sdkDistanceFilter: NSNumber? = distanceFilterInput.map { NSNumber(value: $0) }
 
         let userId = args?["userId"] as? String
+        guard let uid = userId, !uid.trimmingCharacters(in: .whitespaces).isEmpty else {
+            result(FlutterError(code: "MISSING_USER_ID",
+                              message: "userId is required to start tracking",
+                              details: nil))
+            return
+        }
         let vehicleId = args?["vehicleId"] as? String
 
         self.userId = userId
@@ -1154,6 +1162,20 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
     }
 
     // MARK: - Fake GPS Policy
+
+    /// Customise the title and body of the fake-GPS local notification (shown when policy is "warn").
+    private func setFakeGPSNotificationConfig(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        let args = call.arguments as? [String: Any]
+        guard let title = args?["title"] as? String, !title.trimmingCharacters(in: .whitespaces).isEmpty,
+              let body = args?["message"] as? String, !body.trimmingCharacters(in: .whitespaces).isEmpty else {
+            result(FlutterError(code: "INVALID_ARGUMENTS",
+                              message: "title and message are required",
+                              details: nil))
+            return
+        }
+        trackingManager.setFakeGPSNotificationConfig(title: title, body: body)
+        result(nil)
+    }
 
     /// Set the policy for handling detected fake GPS locations.
     /// Valid values: "skip" (default) | "warn" | "stopTracking" | "logToServer"

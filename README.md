@@ -35,7 +35,42 @@ flutter pub get
 
 > On Android 10+ (API 29+) `ACCESS_BACKGROUND_LOCATION` must be requested separately **after** foreground permission is granted. The plugin handles this two-step flow via `requestLocationPermissions()` → `requestAlwaysLocationPermissions()`.
 
-### 2. SDK Repository (`android/build.gradle`)
+### 2. Foreground Notifications (`android/app/src/main/AndroidManifest.xml`)
+
+Required if you use the `warn` fake GPS policy or any local notification via `flutter_local_notifications`.
+
+Add to `<manifest>` block:
+
+```xml
+<!-- Required for showing notifications on Android 13+ -->
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<!-- Required to reschedule notifications after device reboot -->
+<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+```
+
+Add inside `<application>` block:
+
+```xml
+<!-- Required for scheduled notifications to fire -->
+<receiver android:exported="false"
+    android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+<receiver android:exported="false"
+    android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+    <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED"/>
+        <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+        <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+        <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+    </intent-filter>
+</receiver>
+<!-- Required for notification action buttons -->
+<receiver android:exported="false"
+    android:name="com.dexterous.flutterlocalnotifications.ActionBroadcastReceiver" />
+```
+
+> On Android, notifications already display as heads-up banners when the app is in foreground if the channel importance is `Importance.high`. No additional setup is needed for foreground display.
+
+### 3. SDK Repository (`android/build.gradle`)
 
 ```groovy
 allprojects {
@@ -81,7 +116,30 @@ allprojects {
 </array>
 ```
 
-### 4. CocoaPods (`ios/Podfile`)
+### 4. Foreground Notifications (`ios/Runner/AppDelegate.swift`)
+
+By default, iOS suppresses notification banners when the app is in the foreground. Two changes are required in `AppDelegate.swift`:
+
+1. Set `UNUserNotificationCenter.current().delegate = self` **before** `GeneratedPluginRegistrant.register(with: self)` — this prevents `flutter_local_notifications` from replacing the delegate during its own `initialize()` call.
+2. Override `userNotificationCenter(_:willPresent:)` and call `completionHandler([.banner, .sound, .badge])` directly (**do not call `super`** — `FlutterAppDelegate` may not call `completionHandler` for SDK-native notifications, causing banners to be suppressed).
+
+```swift
+import UserNotifications
+
+// In didFinishLaunchingWithOptions, BEFORE GeneratedPluginRegistrant.register:
+UNUserNotificationCenter.current().delegate = self
+
+// Add this override to AppDelegate:
+override func userNotificationCenter(
+  _ center: UNUserNotificationCenter,
+  willPresent notification: UNNotification,
+  withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+) {
+  completionHandler([.banner, .sound, .badge])
+}
+```
+
+### 5. CocoaPods (`ios/Podfile`)
 
 ```ruby
 platform :ios, '15.0'
@@ -360,6 +418,44 @@ controller.onFakeGpsDetected.listen((FakeGpsEvent ev) {
 | `warn` | Native notification (debounced 30 s) |
 | `stopTracking` | Auto-stop tracking on first detection |
 | `logToServer` | Upload with `is_fake=1` + `X-Fake-GPS: true` |
+
+### Foreground Notification for `warn` Policy
+
+To show banners while the app is open, integrate `flutter_local_notifications`:
+
+```yaml
+dependencies:
+  flutter_local_notifications: ^19.0.0
+```
+
+Initialise before `runApp` — set `defaultPresentAlert: true` so iOS shows banners in the foreground:
+
+```dart
+await FlutterLocalNotificationsPlugin().initialize(
+  const InitializationSettings(
+    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
+    iOS: DarwinInitializationSettings(
+      defaultPresentAlert: true,
+      defaultPresentSound: true,
+    ),
+  ),
+);
+```
+
+Then call `_notifications.show(...)` inside your `onFakeGpsDetected` listener. See the [Android Setup](#android-setup) and [iOS Setup](#ios-setup) sections for the required platform configuration (manifest receivers, AppDelegate delegate assignment).
+
+Customise the SDK's own native notification (debounced 30 s) via:
+
+```dart
+await controller.setFakeGpsNotificationConfig(
+  title: '⚠️ Fake GPS Detected',
+  message: 'Please disable mock locations to ensure accurate tracking.',
+);
+```
+
+> `setFakeGpsNotificationConfig` takes named parameters (`title:`, `message:`), not a `Map`.
+
+Request notification permission at runtime before selecting the `warn` policy — use `Permission.notification.request()` (Android 13+) or `IOSFlutterLocalNotificationsPlugin().requestPermissions(alert: true, sound: true)` (iOS).
 
 ---
 

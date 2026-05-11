@@ -78,6 +78,8 @@ class TrackingProvider extends ChangeNotifier {
   // ── Fake GPS ──────────────────────────────────────────────────────
   String fakeGpsPolicy = FakeGpsPolicy.skip;
   bool allowMockLocation = true;
+  String fakeGpsNotificationTitle = 'Fake GPS Detected';
+  String fakeGpsNotificationMessage = 'A fake GPS location has been detected.';
   FakeGpsEvent? lastFakeGpsEvent;
   final List<FakeGpsEvent> fakeGpsHistory = [];
   StreamSubscription<FakeGpsEvent>? _fakeGpsSub;
@@ -195,7 +197,13 @@ class TrackingProvider extends ChangeNotifier {
         'device-id': deviceId,
       });
 
-      // 3. Configure speed-alert API (optional — only when credentials provided).
+      // 3. Configure the SDK's native fake GPS notification.
+      await _controller.setFakeGpsNotificationConfig(
+        title: fakeGpsNotificationTitle,
+        message: fakeGpsNotificationMessage,
+      );
+
+      // 4. Configure speed-alert API (optional — only when credentials provided).
       if (alertApiKey != null && alertApiKey.isNotEmpty &&
           alertApiId != null && alertApiId.isNotEmpty) {
         await _controller.configureAlertAPI(alertApiKey, alertApiId);
@@ -256,33 +264,6 @@ class TrackingProvider extends ChangeNotifier {
     _notificationsReady = true;
   }
 
-  Future<void> _showFakeGpsNotification(FakeGpsEvent event) async {
-    if (!_notificationsReady) return;
-    final body = 'lat=${event.lat.toStringAsFixed(5)} '
-        'lng=${event.lng.toStringAsFixed(5)}'
-        '${event.reason != null ? ' · ${event.reason}' : ''}';
-    await _notifications.show(
-      999, // fixed ID — overwrites previous, no stacking
-      '⚠️ Fake GPS Detected',
-      body,
-      const NotificationDetails(
-        android: AndroidNotificationDetails(
-          'fake_gps_channel',
-          'Fake GPS Alerts',
-          channelDescription: 'Alert when a fake GPS location is detected',
-          importance: Importance.high,
-          priority: Priority.high,
-          icon: '@mipmap/ic_launcher',
-        ),
-        iOS: DarwinNotificationDetails(
-          presentAlert: true,
-          presentSound: true,
-          presentBadge: false,
-        ),
-      ),
-    );
-  }
-
   void _onFakeGps(FakeGpsEvent event) {
     lastFakeGpsEvent = event;
     fakeGpsHistory.insert(0, event);
@@ -295,11 +276,6 @@ class TrackingProvider extends ChangeNotifier {
     }
 
     notifyListeners();
-
-    // Show local notification when policy is warn
-    if (fakeGpsPolicy == FakeGpsPolicy.warn) {
-      _showFakeGpsNotification(event);
-    }
   }
 
   void _onLocation(LocationData loc) {
@@ -718,6 +694,15 @@ class TrackingProvider extends ChangeNotifier {
   Future<void> setFakeGpsPolicy(String policy) async {
     fakeGpsPolicy = policy;
     await _controller.setFakeGpsPolicy(policy);
+    notifyListeners();
+  }
+
+  Future<void> setFakeGpsNotificationConfig({required String title, required String message}) async {
+    fakeGpsNotificationTitle = title;
+    fakeGpsNotificationMessage = message;
+    if (isSdkConfigured) {
+      await _controller.setFakeGpsNotificationConfig(title: title, message: message);
+    }
     notifyListeners();
   }
 

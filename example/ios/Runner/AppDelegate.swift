@@ -1,5 +1,6 @@
 import Flutter
 import UIKit
+import UserNotifications
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -8,6 +9,12 @@ import UIKit
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
+    // Set AppDelegate as UNUserNotificationCenter delegate BEFORE registering
+    // plugins. This prevents flutter_local_notifications from replacing it
+    // with its own delegate during initialize(), which would bypass our
+    // willPresent override and suppress foreground banners.
+    UNUserNotificationCenter.current().delegate = self
+
     GeneratedPluginRegistrant.register(with: self)
 
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
@@ -26,6 +33,9 @@ import UIKit
     willPresent notification: UNNotification,
     withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
   ) {
+    let id = notification.request.identifier
+    let title = notification.request.content.title
+    print("[AppDelegate] willPresent fired — id=\(id) title=\(title)")
     completionHandler([.banner, .sound, .badge])
   }
 }

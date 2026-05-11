@@ -120,6 +120,9 @@ abstract class VietmapTrackingPlatform extends PlatformInterface {
   /// [policy] must be one of the values in [FakeGpsPolicy].
   Future<void> setFakeGpsPolicy(String policy);
 
+  /// Customise the title and body of the fake-GPS local notification (shown when policy is "warn").
+  Future<void> setFakeGpsNotificationConfig({required String title, required String message});
+
   // ── Event streams ─────────────────────────────────────────────
   Stream<LocationData> get onLocationUpdate;
   Stream<TrackingStatus> get onTrackingStatusChanged;

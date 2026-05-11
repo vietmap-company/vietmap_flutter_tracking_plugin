@@ -319,6 +319,9 @@ class VietmapTrackingController with WidgetsBindingObserver {
   Future<bool> startTracking(LocationTrackingConfig config) async {
     _requireConfigured();
     _logSection('Start Tracking SDK');
+    if (config.userId == null || config.userId!.trim().isEmpty) {
+      throw ArgumentError.value(config.userId, 'userId', 'userId is required to start tracking');
+    }
     try {
       debugPrint(
         'intervalMs=${config.intervalMs} distanceFilter=${config.distanceFilter} backgroundMode=${config.backgroundMode}',
@@ -633,6 +636,18 @@ class VietmapTrackingController with WidgetsBindingObserver {
       await _platform.setFakeGpsPolicy(policy);
     } catch (e) {
       debugPrint('Failed to setFakeGpsPolicy: $e');
+    }
+  }
+
+  /// Customise the title and body of the fake-GPS local notification (shown when policy is "warn").
+  Future<void> setFakeGpsNotificationConfig({
+    required String title,
+    required String message,
+  }) async {
+    try {
+      await _platform.setFakeGpsNotificationConfig(title: title, message: message);
+    } catch (e) {
+      debugPrint('Failed to setFakeGpsNotificationConfig: $e');
     }
   }
 
