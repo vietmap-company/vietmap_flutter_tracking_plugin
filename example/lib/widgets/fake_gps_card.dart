@@ -151,27 +151,7 @@ class FakeGpsCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 12),
-            Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text('Allow Mock Location:',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
-                  Transform.scale(
-                    scale: 0.8,
-                    child: Switch(
-                      value: p.allowMockLocation,
-                      onChanged: (v) => p.setAllowMockLocation(v),
-                      activeColor: Colors.purple,
-                    ),
-                  ),
-                ]),
-            const Text(
-              'If enabled, simulated locations will be processed as real points and bypass policies.',
-              style: TextStyle(fontSize: 11, color: Colors.purple),
-            ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             if (!p.useCustomConfig)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -181,7 +161,7 @@ class FakeGpsCard extends StatelessWidget {
                   border: Border.all(color: Colors.orange.shade200),
                 ),
                 child: const Text(
-                  '⚠️ Fake GPS settings chỉ khả dụng ở Custom Config mode. Bật "Use Custom Config" để cấu hình.',
+                  '⚠️ Bật "Use Custom Config" để cấu hình policy và detection.',
                   style: TextStyle(fontSize: 11, color: Colors.orange),
                 ),
               ),
@@ -189,9 +169,18 @@ class FakeGpsCard extends StatelessWidget {
             Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Allow Mock Location:',
-                      style: TextStyle(
-                          fontSize: 13, fontWeight: FontWeight.w600)),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Allow Mock Location:',
+                          style: TextStyle(
+                              fontSize: 13, fontWeight: FontWeight.w600)),
+                      const Text(
+                        'OFF → detection active, policy applied',
+                        style: TextStyle(fontSize: 10, color: Colors.purple),
+                      ),
+                    ],
+                  ),
                   Transform.scale(
                     scale: 0.8,
                     child: Switch(
@@ -266,6 +255,8 @@ class FakeGpsCard extends StatelessWidget {
   ) async {
     if (policy != FakeGpsPolicy.warn) {
       await p.setFakeGpsPolicy(policy);
+      // skip = pass-through (no detection); any other policy = detection ON
+      p.setAllowMockLocation(policy == FakeGpsPolicy.skip);
       return;
     }
 
@@ -273,6 +264,7 @@ class FakeGpsCard extends StatelessWidget {
     final alreadyGranted = await p.hasNotificationPermission();
     if (alreadyGranted) {
       await p.setFakeGpsPolicy(policy);
+      p.setAllowMockLocation(false); // detection ON
       return;
     }
 
@@ -300,6 +292,7 @@ class FakeGpsCard extends StatelessWidget {
 
     if (granted) {
       await p.setFakeGpsPolicy(policy);
+      p.setAllowMockLocation(false); // detection ON
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

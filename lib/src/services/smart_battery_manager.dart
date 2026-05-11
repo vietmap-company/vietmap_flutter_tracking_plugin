@@ -168,6 +168,9 @@ class SmartBatteryManager {
     _motionDetail = _MotionDetail.straight;
     _straightSeconds = 0;
     _stationarySeconds = 0;
+    // Reset profile so next enable() starts clean — prevents stale profile
+    // from previous session triggering a surprise override immediately on re-enable.
+    _currentProfile = SmartBatteryProfile.general;
 
     debugPrint('[SmartBattery] Disabled');
   }
@@ -346,10 +349,11 @@ class SmartBatteryManager {
       _profileController.add(newProfile);
     }
 
-    // Khi general + có custom override → app tự apply config, bỏ qua native preset
-    if (newProfile == SmartBatteryProfile.general &&
-        customGeneralConfigOverride != null) {
-      debugPrint('[SmartBattery] general + customOverride → delegate to app');
+    // Khi có custom override (user đang dùng custom config) → app tự apply config
+    // cho MỌI profile transition, không để SmartBattery ghi đè customIntervalMs
+    // bằng native preset (navigation=5s, batterySaver=300s, general=30s).
+    if (customGeneralConfigOverride != null) {
+      debugPrint('[SmartBattery] customOverride set → delegate to app for $newProfile (skip native preset)');
       await customGeneralConfigOverride!();
       return;
     }
