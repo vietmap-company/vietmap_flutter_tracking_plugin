@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'vietmap_tracking_plugin'
-  s.version          = '1.0.6'
+  s.version          = '1.0.7'
   s.summary          = 'Flutter plugin for Vietmap GPS tracking.'
   s.description      = <<-DESC
 A Flutter plugin for GPS tracking and location data transmission to Vietmap's tracking API with background service support.

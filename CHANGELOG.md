@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.7] - 2026-05-11
+
+### Added
+
+- **`setFakeGpsNotificationConfig(title, message)`** — New SDK-level API to customise the title and body of the native fake GPS notification. The notification is issued directly by the native SDK (fires even when the app is killed) and is now configurable at runtime without re-initialising the SDK.
+
+### Changed
+
+- **Fake GPS notification** — Removed duplicate notification: previously both `flutter_local_notifications` and the native SDK fired separate alerts on fake GPS detection. The SDK's own native notification is now the single source of truth. `flutter_local_notifications` is retained only for runtime permission requests (`hasNotificationPermission` / `requestNotificationPermission`).
+
+### Fixed
+
+- **Android release build** — Removed stale `assets/ic_gps_alert.png` entry from `pubspec.yaml` that caused `No file or variants found for asset` build failure in release mode.
+
+---
+
 ## [1.0.6] - 2026-05-04
 
 ### Changed
