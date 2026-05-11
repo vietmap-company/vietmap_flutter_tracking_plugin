@@ -60,8 +60,8 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 | Platform | SDK | Version |
 |----------|-----|---------|
-| iOS | VietmapTrackingSDK (CocoaPods) | 1.4.2 |
-| Android | com.vietmap:tracking-sdk | 1.0.4 |
+| iOS | VietmapTrackingSDK (CocoaPods) | 1.4.3 |
+| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.4.3 |
 
 ---
 
