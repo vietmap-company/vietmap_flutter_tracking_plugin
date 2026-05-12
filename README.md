@@ -61,7 +61,7 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 | Platform | SDK | Version |
 |----------|-----|---------|
 | iOS | VietmapTrackingSDK (CocoaPods) | 1.4.3 |
-| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.4.3 |
+| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.4.4 |
 
 ---
 
@@ -355,7 +355,7 @@ controller.unregisterLifecycleObserver();
 TrackingPresets.navigation()    //  5 s  — real-time vehicle / turn-by-turn
 TrackingPresets.fitness()       // 10 s  — outdoor activities
 TrackingPresets.general()       // 30 s  — balanced fleet tracking (default)
-TrackingPresets.batterySaver()  //  5 min — parked or low-battery assets
+TrackingPresets.batterySaver()  // 10 min — parked or low-battery assets
 ```
 
 #### Distance-based
@@ -543,6 +543,7 @@ controller.onSmartBatteryProfileChanged // Stream<SmartBatteryProfile>
 
 ```dart
 await controller.setAutoUpload(bool);
+await controller.isNetworkConnected();               // → bool
 await controller.getCachedLocationsCount();          // → int
 await controller.getDatabaseSizeBytes();             // → int
 await controller.uploadCachedLocationsManually();
@@ -664,8 +665,8 @@ LocationUtils.isWithinRadius(location, targetLat, targetLng, radiusMetres);
 │   iOS Native Bridge  │  Android Native Bridge    │
 │   Swift              │  Kotlin                   │
 ├──────────────────────┼───────────────────────────┤
-│  VietmapTrackingSDK  │  com.vietmap:tracking-sdk │
-│  1.4.2 (CocoaPods)   │  1.0.4 (Maven)            │
+│  VietmapTrackingSDK  │  vietmap-tracking-sdk-android │
+│  1.4.3 (CocoaPods)   │  1.4.4 (JitPack)              │
 └──────────────────────┴───────────────────────────┘
 ```
 

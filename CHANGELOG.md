@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.7] - 2026-05-11
+## [1.0.7] - 2026-05-12
 
 ### Added
 
@@ -15,11 +15,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Fake GPS notification** — Removed duplicate notification: previously both `flutter_local_notifications` and the native SDK fired separate alerts on fake GPS detection. The SDK's own native notification is now the single source of truth. `flutter_local_notifications` is retained only for runtime permission requests (`hasNotificationPermission` / `requestNotificationPermission`).
+- **Native SDK update** — Android upgraded to `vietmap-tracking-sdk-android:1.4.4`; iOS upgraded to `VietmapTrackingSDK 1.4.3`.
+- **Fake GPS notification** — Removed duplicate notification: previously both `flutter_local_notifications` and the native SDK fired separate alerts on fake GPS detection. The SDK's own native notification is now the single source of truth. `flutter_local_notifications` is retained only for runtime permission requests.
+- **`SmartBatteryManager.disable()`** — Now resets the internal moving/still profile back to idle so the next `enable()` call starts from a clean state.
 
 ### Fixed
 
-- **Android release build** — Removed stale `assets/ic_gps_alert.png` entry from `pubspec.yaml` that caused `No file or variants found for asset` build failure in release mode.
+- **`TrackingPresets` doc comments** — Interval descriptions now accurately reflect the actual `intervalMs` values: `navigation` = 5 s, `fitness` = 10 s, `general` = 30 s, `batterySaver` = 10 min.
+
 
 ---
 
