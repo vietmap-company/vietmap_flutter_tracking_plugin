@@ -28,7 +28,7 @@ import 'location_tracking_config.dart';
 class TrackingPresets {
   // ── Interval-based presets (default) ────────────────────────────────────
 
-  /// High-accuracy, timer-driven updates every 3 seconds.
+  /// High-accuracy, timer-driven updates every 5 seconds.
   /// Suitable for turn-by-turn navigation and real-time vehicle tracking.
   static LocationTrackingConfig navigation({
     String? notificationTitle,
@@ -44,7 +44,7 @@ class TrackingPresets {
     );
   }
 
-  /// Balanced accuracy, timer-driven updates every 5 seconds.
+  /// Balanced accuracy, timer-driven updates every 10 seconds.
   /// Suitable for outdoor fitness activities (running, cycling).
   static LocationTrackingConfig fitness({
     String? notificationTitle,
@@ -60,7 +60,7 @@ class TrackingPresets {
     );
   }
 
-  /// Medium accuracy, timer-driven updates every 10 seconds.
+  /// Medium accuracy, timer-driven updates every 30 seconds.
   /// Good default for most fleet or delivery tracking scenarios.
   static LocationTrackingConfig general({
     String? notificationTitle,
@@ -76,14 +76,14 @@ class TrackingPresets {
     );
   }
 
-  /// Low accuracy, timer-driven updates every 5 minutes.
+  /// Low accuracy, timer-driven updates every 10 minutes.
   /// Minimises battery consumption; suitable for slow-moving assets.
   static LocationTrackingConfig batterySaver({
     String? notificationTitle,
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
-      intervalMs: 300000,
+      intervalMs: 600000,
       distanceFilter: null,
       accuracy: LocationAccuracy.low,
       backgroundMode: true,

@@ -185,7 +185,7 @@ class SmartBatteryManager {
 
     // ── 1. Phát hiện xe đứng yên ─────────────────────────────────────────
     if (speedMs < 0.5) {
-      // Dừng cornering timer vì xe không chạy
+      // Xe dừng: reset trạng thái cua về đường thẳng, khởi động bộ đếm đứng yên
       _clearStraightRoadTimer();
       _setMotionDetail(_MotionDetail.straight);
 

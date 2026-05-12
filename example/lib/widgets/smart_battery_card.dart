@@ -14,9 +14,9 @@ class SmartBatteryCard extends StatelessWidget {
       };
 
   String _profileLabel(SmartBatteryProfile p) => switch (p) {
-        SmartBatteryProfile.navigation => '🚗 Navigation (3s / 5m)',
-        SmartBatteryProfile.general => '⚡ General (10s / 15m)',
-        SmartBatteryProfile.batterySaver => '🔋 Battery Saver (30s / 50m)',
+        SmartBatteryProfile.navigation => '🚗 Navigation (5s)',
+        SmartBatteryProfile.general => '⚡ General (30s)',
+        SmartBatteryProfile.batterySaver => '🔋 Battery Saver (5 min)',
       };
 
   @override
@@ -101,7 +101,7 @@ class SmartBatteryCard extends StatelessWidget {
                       child: RadioListTile<String>(
                         title: const Text('Navigation',
                             style: TextStyle(fontSize: 13)),
-                        subtitle: const Text('3s / 5m',
+                        subtitle: const Text('5s',
                             style: TextStyle(fontSize: 11)),
                         value: 'navigation',
                         dense: true,
@@ -112,7 +112,7 @@ class SmartBatteryCard extends StatelessWidget {
                       child: RadioListTile<String>(
                         title: const Text('General',
                             style: TextStyle(fontSize: 13)),
-                        subtitle: const Text('10s / 15m',
+                        subtitle: const Text('30s',
                             style: TextStyle(fontSize: 11)),
                         value: 'general',
                         dense: true,

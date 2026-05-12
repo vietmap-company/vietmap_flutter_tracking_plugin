@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'dart:math' show sqrt, asin;
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:device_info_plus/device_info_plus.dart';
@@ -361,7 +362,7 @@ class TrackingProvider extends ChangeNotifier {
   // ─────────────────────────────────────────────────────────────────
 
   String get effectiveUserId =>
-      userEmail.isNotEmpty ? userEmail : 'anonymous_${deviceId.substring(0, 8)}';
+      userEmail.isNotEmpty ? userEmail : '';
 
   void toggleTrackingWithTimer(bool v) {
     _trackingWithTimer = v;
@@ -544,10 +545,16 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<bool> _isOnline() async {
+    final result = await Connectivity().checkConnectivity();
+    return result.any((c) => c != ConnectivityResult.none);
+  }
+
   /// Reset and fetch page 1 (dùng cho auto-refresh 20s hoặc fetch lần đầu).
   Future<void> fetchServerHistory() async {
     if (!isSdkConfigured) return;
     if (isFetchingHistory) return;
+    if (!await _isOnline()) return;
     _historyPage = 1;
     isFetchingHistory = true;
     historyFetchError = null;
@@ -574,6 +581,7 @@ class TrackingProvider extends ChangeNotifier {
   Future<void> fetchMoreServerHistory() async {
     if (!isSdkConfigured) return;
     if (isFetchingMoreHistory || isFetchingHistory || !hasMoreHistory) return;
+    if (!await _isOnline()) return;
     isFetchingMoreHistory = true;
     notifyListeners();
     try {
