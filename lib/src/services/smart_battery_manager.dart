@@ -81,7 +81,6 @@ class SmartBatteryManager {
 
   int _lastBatteryLevel = 100;
   bool _isCharging = false;
-  DateTime? _lastBatteryFetchTime;
 
   // Biến phát hiện xe đứng yên qua speed của GPS points
   int _stationarySeconds = 0;
