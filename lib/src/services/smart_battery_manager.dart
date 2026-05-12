@@ -110,7 +110,6 @@ class SmartBatteryManager {
       _lastBatteryLevel = await _battery.batteryLevel;
       final state = await _battery.batteryState;
       _isCharging = state == BatteryState.charging || state == BatteryState.full;
-      _lastBatteryFetchTime = DateTime.now();
       debugPrint(
         '[SmartBattery] prefetch | level=$_lastBatteryLevel% charging=$_isCharging',
       );
