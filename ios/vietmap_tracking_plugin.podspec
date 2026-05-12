@@ -15,7 +15,7 @@ A Flutter plugin for GPS tracking and location data transmission to Vietmap's tr
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.dependency 'VietmapTrackingSDK', '1.4.2'
+  s.dependency 'VietmapTrackingSDK', '1.4.3'
   # s.dependency 'VietmapTrackingSDK'
   s.platform = :ios, '12.0'
 
