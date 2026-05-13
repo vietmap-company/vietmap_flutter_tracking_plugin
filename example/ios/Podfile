@@ -32,7 +32,7 @@ target 'Runner' do
   use_frameworks!
 
   # Use local VietmapTrackingSDK
-  pod 'VietmapTrackingSDK', '1.4.3'
+  pod 'VietmapTrackingSDK', '1.4.5'
   # pod 'VietmapTrackingSDK', :path => '/Users/khiempg/Develop/map-sdk-tracking/ios'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))

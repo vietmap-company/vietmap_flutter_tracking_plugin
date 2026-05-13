@@ -35,15 +35,15 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 | Feature | Description |
 |---------|-------------|
-| 🛰️ Background GPS | Foreground service (Android) / background location mode (iOS) |
-| 🔑 API Key Validation | `initializeTracking` validates server-side — throws `INVALID_API_KEY` on failure |
-| 📦 Metadata Attachment | `setMetadata` stamps every GPS record with arbitrary key-value pairs |
-| ⚡ Speed Alerts | Real-time speed monitoring via configurable Alert API |
-| 💾 Offline Cache | SQLite cache with auto-upload when network recovers |
-| 🚨 Fake GPS Detection | Native detection with 4 configurable response policies; SDK issues its own notification even when app is killed |
-| 🔋 Smart Battery | Auto-adjusts tracking precision based on battery level and movement |
-| 🎯 Tracking Presets | Navigation / Fitness / General / BatterySaver — interval and distance variants |
-| 📏 Location Utilities | Haversine distance, speed conversion, geofence check |
+| Background GPS | Foreground service (Android) / background location mode (iOS) |
+| API Key Validation | `initializeTracking` validates server-side — throws `INVALID_API_KEY` on failure |
+| Metadata Attachment | `setMetadata` stamps every GPS record with arbitrary key-value pairs |
+| Speed Alerts | Real-time speed monitoring via configurable Alert API |
+| Offline Cache | SQLite cache with auto-upload when network recovers |
+| Fake GPS Detection | Native detection with 4 configurable response policies; SDK issues its own notification even when app is killed |
+| Smart Battery | Auto-adjusts tracking precision based on battery level and movement |
+| Tracking Presets | Navigation / Fitness / General / BatterySaver — interval and distance variants |
+| Location Utilities | Haversine distance, speed conversion, geofence check |
 
 ---
 
@@ -170,31 +170,6 @@ By default iOS suppresses notification banners when the app is in the foreground
 1. Set `UNUserNotificationCenter.current().delegate = self` **before** `GeneratedPluginRegistrant.register(with: self)`.
 2. Override `userNotificationCenter(_:willPresent:)` and call `completionHandler([.banner, .sound, .badge])` directly — **do not call `super`**.
 
-```swift
-import UserNotifications
-
-@UIApplicationMain
-@objc class AppDelegate: FlutterAppDelegate {
-  override func application(
-    _ application: UIApplication,
-    didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
-  ) -> Bool {
-    // Must be set BEFORE GeneratedPluginRegistrant.register
-    UNUserNotificationCenter.current().delegate = self
-    GeneratedPluginRegistrant.register(with: self)
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
-
-  override func userNotificationCenter(
-    _ center: UNUserNotificationCenter,
-    willPresent notification: UNNotification,
-    withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
-  ) {
-    // Do NOT call super — present banner + sound for all notifications
-    completionHandler([.banner, .sound, .badge])
-  }
-}
-```
 
 ### 5. CocoaPods
 
@@ -215,24 +190,6 @@ cd ios && pod install
 
 ### 1. Initialize the plugin (once, before `runApp`)
 
-```dart
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
-// Initialize flutter_local_notifications — needed for runtime permission requests only.
-// The SDK itself issues its own native notifications (foreground service + fake GPS alert).
-await FlutterLocalNotificationsPlugin().initialize(
-  const InitializationSettings(
-    android: AndroidInitializationSettings('@mipmap/ic_launcher'),
-    iOS: DarwinInitializationSettings(
-      requestAlertPermission: false,
-      requestBadgePermission: false,
-      requestSoundPermission: false,
-      defaultPresentAlert: true,
-      defaultPresentSound: true,
-    ),
-  ),
-);
-```
 
 ### 2. Configure the SDK
 
@@ -249,19 +206,6 @@ Future<void> initSdk() async {
       'YOUR_API_KEY',
       baseURL: 'https://live.fleetwork.vn/api/v1', // optional
     );
-
-    // Attach metadata to every GPS record (optional)
-    await controller.setMetadata({
-      'userId': 'user-123',
-      'appVersion': '1.0.0',
-    });
-
-    // Customise fake GPS native notification (optional)
-    await controller.setFakeGpsNotificationConfig(
-      title: 'Fake GPS Detected',
-      message: 'Please disable mock locations.',
-    );
-
     // Register lifecycle observer for background/foreground transitions
     controller.registerLifecycleObserver();
   } on PlatformException catch (e) {
@@ -478,13 +422,40 @@ controller.onSmartBatteryProfileChanged.listen((profile) {
 });
 ```
 
-| Profile | Interval | Distance | Use case |
-|---------|----------|----------|----------|
-| `navigation` | 5 s | 5 m | Turn-by-turn, high accuracy |
-| `general` | 30 s | 15 m | Standard fleet tracking |
-| `batterySaver` | 5 min | 100 m | Low battery / parked |
+| Profile | Interval | Use case |
+|---------|----------|----------|
+| `navigation` | 5 s | Turn-by-turn, high accuracy |
+| `general` | 30 s | Standard fleet tracking |
+| `batterySaver` | 10 min | Low battery / parked |
 
-The manager switches to `batterySaver` automatically when battery drops below 15% or the device is stationary, then switches back when conditions improve.
+The manager switches profiles automatically:
+- Battery < 15% + not charging → `batterySaver`
+- Vehicle stationary ≥ 60 s → `general`
+- Vehicle cornering (heading delta > 15°) → `navigation`
+- Otherwise → `preferredMovingProfile` (default: `general`)
+
+### Custom config and Smart Battery
+
+Smart Battery is always active during tracking and will silently override the native tracking interval whenever a profile transition occurs (low battery, stationary, cornering). When using a standard preset this is the intended behaviour. When using a custom `LocationTrackingConfig` with non-preset values, you must register a `customGeneralConfigOverride` callback **before** calling `startTracking()` to prevent Smart Battery from replacing your config with a native preset.
+
+```dart
+// Register before startTracking — tells Smart Battery to re-apply your config
+// instead of switching to a native preset on any profile transition.
+SmartBatteryManager.instance.customGeneralConfigOverride = () async {
+  await controller.updateTrackingConfig(myCustomConfig);
+};
+
+await controller.startTracking(myCustomConfig);
+```
+
+Clear the override when stopping to avoid it persisting across sessions:
+
+```dart
+await controller.stopTracking();
+SmartBatteryManager.instance.customGeneralConfigOverride = null;
+```
+
+> **Note:** The callback is invoked for every profile transition — including `batterySaver` and `navigation` — so Smart Battery continues to detect and report profile changes via `onSmartBatteryProfileChanged`, but the actual tracking interval is always governed by your config.
 
 ---
 
@@ -560,6 +531,8 @@ await controller.configureCacheLimits(
 ```dart
 final List<GpsLocation> history = await controller.getTrackingHistory(
   userId: 'user-123',
+  fromTimestamp: DateTime(2026, 5, 1).millisecondsSinceEpoch, // optional
+  toTimestamp: DateTime(2026, 5, 12).millisecondsSinceEpoch,  // optional
   pageNumber: 1,
   pageSize: 50,
   sortDescending: true,
@@ -665,8 +638,8 @@ LocationUtils.isWithinRadius(location, targetLat, targetLng, radiusMetres);
 │   iOS Native Bridge  │  Android Native Bridge    │
 │   Swift              │  Kotlin                   │
 ├──────────────────────┼───────────────────────────┤
-│  VietmapTrackingSDK  │  vietmap-tracking-sdk-android │
-│  1.4.3 (CocoaPods)   │  1.4.4 (JitPack)              │
+│  VietmapTrackingSDK  │  vietmap-tracking-sdk     │
+│  1.4.5 (CocoaPods)   │  1.4.4 (JitPack)          │
 └──────────────────────┴───────────────────────────┘
 ```
 
