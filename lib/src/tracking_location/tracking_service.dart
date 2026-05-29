@@ -23,55 +23,65 @@ class TrackingService {
   static bool trackingLocation = false;
   static bool asyncData = false;
 
+  static void _logSection(String section, {bool end = false}) {
+    debugPrint('=======${end ? 'End ' : ''}$section=======');
+  }
+
   static getInstance() async {
     initializeService();
   }
 
   @pragma('vm:entry-point')
   static Future<void> initializeService() async {
-    final service = FlutterBackgroundService();
+    _logSection('Initialize Tracking Service');
+    try {
+      final service = FlutterBackgroundService();
 
-    /// OPTIONAL, using custom notification channel id
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
-      'my_foreground',
-      'vm-tracking-location',
-      description: '',
-      importance: Importance.low,
-    );
+      /// OPTIONAL, using custom notification channel id
+      const AndroidNotificationChannel channel = AndroidNotificationChannel(
+        'my_foreground',
+        'vm-tracking-location',
+        description: '',
+        importance: Importance.low,
+      );
 
-    final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
-        FlutterLocalNotificationsPlugin();
+      final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+          FlutterLocalNotificationsPlugin();
 
-    await flutterLocalNotificationsPlugin
-        .resolvePlatformSpecificImplementation<
-            AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(channel);
+      await flutterLocalNotificationsPlugin
+          .resolvePlatformSpecificImplementation<
+              AndroidFlutterLocalNotificationsPlugin>()
+          ?.createNotificationChannel(channel);
 
-    await service.configure(
-      androidConfiguration: AndroidConfiguration(
-        // this will be executed when app is in foreground or background in separated isolate
-        onStart: onStart,
-        // auto start service
-        autoStart: false,
-        isForegroundMode: true,
-        notificationChannelId: 'my_foreground',
-        initialNotificationTitle: 'Fleetwork',
-        initialNotificationContent: 'Service',
-        foregroundServiceNotificationId: 888,
-      ),
-      iosConfiguration: IosConfiguration(
-        // auto start service
-        autoStart: false,
-        // this will be executed when app is in foreground in separated isolate
-        onForeground: onStart,
-        // you have to enable background fetch capability on xcode project
-        onBackground: onIosBackground,
-      ),
-    );
+      await service.configure(
+        androidConfiguration: AndroidConfiguration(
+          // this will be executed when app is in foreground or background in separated isolate
+          onStart: onStart,
+          // auto start service
+          autoStart: false,
+          isForegroundMode: true,
+          notificationChannelId: 'my_foreground',
+          initialNotificationTitle: 'Fleetwork',
+          initialNotificationContent: 'Service',
+          foregroundServiceNotificationId: 888,
+        ),
+        iosConfiguration: IosConfiguration(
+          // auto start service
+          autoStart: false,
+          // this will be executed when app is in foreground in separated isolate
+          onForeground: onStart,
+          // you have to enable background fetch capability on xcode project
+          onBackground: onIosBackground,
+        ),
+      );
+    } finally {
+      _logSection('Initialize Tracking Service', end: true);
+    }
   }
 
   @pragma('vm:entry-point')
   static void onStart(ServiceInstance service) async {
+    _logSection('Register Service Listeners');
     // Only available for flutter 3.0.0 and later
     DartPluginRegistrant.ensureInitialized();
 
@@ -110,6 +120,7 @@ class TrackingService {
         // }
       },
     );
+    _logSection('Register Service Listeners', end: true);
   }
 
   @pragma('vm:entry-point')
@@ -126,36 +137,51 @@ class TrackingService {
   }
 
   static Future<void> start() async {
-    debugPrint("StartTrackingLocation");
-    await serviceBackground.startService();
-    TrackingLocationBackground.startLocation();
-    var isRunning = await checkServiceStart();
-    if (isRunning) {
-      serviceBackground.invoke("trackingLocation");
+    _logSection('Start Tracking Service');
+    try {
+      debugPrint("StartTrackingLocation");
+      await serviceBackground.startService();
+      TrackingLocationBackground.startLocation();
+      var isRunning = await checkServiceStart();
+      if (isRunning) {
+        serviceBackground.invoke("trackingLocation");
+      }
+    } finally {
+      _logSection('Start Tracking Service', end: true);
     }
   }
 
   static Future<void> stop() async {
-    debugPrint("EndTrackingService");
-    TrackingLocationBackground.stopLocation();
-    var isRunning = await checkServiceStart();
-    if (isRunning) {
-      serviceBackground.invoke("stopTrackingLocation");
-      if (!asyncData) {
-        serviceBackground.invoke("stopService");
+    _logSection('Stop Tracking Service');
+    try {
+      debugPrint("EndTrackingService");
+      TrackingLocationBackground.stopLocation();
+      var isRunning = await checkServiceStart();
+      if (isRunning) {
+        serviceBackground.invoke("stopTrackingLocation");
+        if (!asyncData) {
+          serviceBackground.invoke("stopService");
+        }
       }
+    } finally {
+      _logSection('Stop Tracking Service', end: true);
     }
   }
 
   static void handleAsyncData() async {
     // bool? keyAsyncData = await FWSharePreference().getKeyAsyncData();
     // if (keyAsyncData != null && keyAsyncData) return;
-    debugPrint("StartHandleAsyncData");
-    await serviceBackground.startService();
-    var isRunning = await checkServiceStart();
-    if (isRunning) {
-      // await FWSharePreference().setKeyAsyncData(true);
-      serviceBackground.invoke("handleAsyncData");
+    _logSection('Handle Async Data');
+    try {
+      debugPrint("StartHandleAsyncData");
+      await serviceBackground.startService();
+      var isRunning = await checkServiceStart();
+      if (isRunning) {
+        // await FWSharePreference().setKeyAsyncData(true);
+        serviceBackground.invoke("handleAsyncData");
+      }
+    } finally {
+      _logSection('Handle Async Data', end: true);
     }
   }
 

@@ -1,6 +1,6 @@
 name: vietmap_tracking_plugin
 description: A comprehensive Flutter plugin for GPS tracking and location data transmission to Vietmap's tracking API with background service support.
-version: 1.0.0-alpha.1
+version: 1.0.3
 homepage: https://github.com/vietmap-company/vietmap_tracking_plugin
 repository: https://github.com/vietmap-company/vietmap_tracking_plugin
 issue_tracker: https://github.com/vietmap-company/vietmap_tracking_plugin/issues
@@ -22,15 +22,18 @@ environment:
 
 dependencies:
   background_location_2: ^0.16.3
+  battery_plus: ^6.0.3
   connectivity_plus: ^6.1.4
   flutter:
     sdk: flutter
   flutter_background_service: ^5.1.0
-  flutter_local_notifications: ^19.3.0
+  flutter_local_notifications: ^19.4.2
   geolocator: ^14.0.1
   http: ^1.1.0
   plugin_platform_interface: ^2.0.2
   shared_preferences: ^2.5.3
+  flutter_dotenv: ^6.0.0
+
 
 dev_dependencies:
   flutter_test:
@@ -55,7 +58,7 @@ flutter:
   plugin:
     platforms:
       android:
-        package: com.example.vietmap_tracking_plugin
+        package: com.vietmap.tracking
         pluginClass: VietmapTrackingPlugin
       ios:
         pluginClass: VietmapTrackingPlugin

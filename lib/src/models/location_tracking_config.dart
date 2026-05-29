@@ -1,13 +1,13 @@
 /// Configuration for location tracking
 class LocationTrackingConfig {
-  /// Interval between location updates in milliseconds
-  final int intervalMs;
+  /// Interval between location updates in milliseconds. Optional, SDK default used if null.
+  final int? intervalMs;
 
-  /// Minimum distance between location updates in meters
-  final double distanceFilter;
+  /// Minimum distance between location updates in meters. Optional, SDK default used if null.
+  final double? distanceFilter;
 
-  /// Desired accuracy level: 'high', 'medium', or 'low'
-  final LocationAccuracy accuracy;
+  /// Desired accuracy level: 'high', 'medium', or 'low'. Optional.
+  final LocationAccuracy? accuracy;
 
   /// Whether to continue tracking in background
   final bool backgroundMode;
@@ -18,34 +18,64 @@ class LocationTrackingConfig {
   /// Custom notification message for foreground service (Android)
   final String? notificationMessage;
 
+  /// Device ID for tracking identification
+  final String? deviceId;
+
+  /// User ID for tracking identification (mapped to driverId in native SDKs)
+  final String? userId;
+
+  /// Vehicle ID for tracking identification. Optional.
+  final String? vehicleId;
+
+  /// API endpoint for sending tracking data
+  final String? apiEndpoint;
+
+  /// Whether to allow mock/fake locations. If false (default), the SDK will block fake locations.
+  final bool allowMockLocation;
+
   const LocationTrackingConfig({
-    required this.intervalMs,
-    required this.distanceFilter,
-    required this.accuracy,
-    required this.backgroundMode,
+    this.intervalMs,
+    this.distanceFilter,
+    this.accuracy,
+    this.backgroundMode = true,
     this.notificationTitle,
     this.notificationMessage,
+    this.deviceId,
+    this.userId,
+    this.vehicleId,
+    this.apiEndpoint,
+    this.allowMockLocation = false,
   });
 
   /// Convert to JSON for platform channel
   Map<String, dynamic> toJson() => {
     'intervalMs': intervalMs,
     'distanceFilter': distanceFilter,
-    'accuracy': accuracy.value,
+    'accuracy': accuracy?.value,
     'backgroundMode': backgroundMode,
     'notificationTitle': notificationTitle,
     'notificationMessage': notificationMessage,
+    'deviceId': deviceId,
+    'userId': userId,
+    'vehicleId': vehicleId,
+    'apiEndpoint': apiEndpoint,
+    'allowMockLocation': allowMockLocation,
   };
 
   /// Create from JSON
   factory LocationTrackingConfig.fromJson(Map<String, dynamic> json) {
     return LocationTrackingConfig(
-      intervalMs: json['intervalMs'] as int,
-      distanceFilter: (json['distanceFilter'] as num).toDouble(),
-      accuracy: LocationAccuracy.fromString(json['accuracy'] as String),
-      backgroundMode: json['backgroundMode'] as bool,
+      intervalMs: json['intervalMs'] as int?,
+      distanceFilter: (json['distanceFilter'] as num?)?.toDouble(),
+      accuracy: json['accuracy'] != null ? LocationAccuracy.fromString(json['accuracy'] as String) : null,
+      backgroundMode: json['backgroundMode'] as bool? ?? true,
       notificationTitle: json['notificationTitle'] as String?,
       notificationMessage: json['notificationMessage'] as String?,
+      deviceId: json['deviceId'] as String?,
+      userId: json['userId'] as String?,
+      vehicleId: json['vehicleId'] as String?,
+      apiEndpoint: json['apiEndpoint'] as String?,
+      allowMockLocation: json['allowMockLocation'] as bool? ?? false,
     );
   }
 
@@ -57,6 +87,11 @@ class LocationTrackingConfig {
     bool? backgroundMode,
     String? notificationTitle,
     String? notificationMessage,
+    String? deviceId,
+    String? userId,
+    String? vehicleId,
+    String? apiEndpoint,
+    bool? allowMockLocation,
   }) {
     return LocationTrackingConfig(
       intervalMs: intervalMs ?? this.intervalMs,
@@ -65,6 +100,11 @@ class LocationTrackingConfig {
       backgroundMode: backgroundMode ?? this.backgroundMode,
       notificationTitle: notificationTitle ?? this.notificationTitle,
       notificationMessage: notificationMessage ?? this.notificationMessage,
+      deviceId: deviceId ?? this.deviceId,
+      userId: userId ?? this.userId,
+      vehicleId: vehicleId ?? this.vehicleId,
+      apiEndpoint: apiEndpoint ?? this.apiEndpoint,
+      allowMockLocation: allowMockLocation ?? this.allowMockLocation,
     );
   }
 }

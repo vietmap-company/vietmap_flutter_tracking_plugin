@@ -1,0 +1,182 @@
+<?xml version="1.0"?>
+<gpx version="1.1" creator="GPXRouteCreator">
+
+<!-- City Run: Quận 1, TP. Hồ Chí Minh -->
+<!-- Nhà thờ Đức Bà → Đường Lê Duẩn → Nam Kỳ Khởi Nghĩa → Dinh Độc Lập → Lê Lợi → Nguyễn Huệ → Đồng Khởi → quay lại -->
+<!-- Tốc độ chạy bộ: ~10 km/h (~2.8 m/s), mỗi waypoint cách nhau 5 giây -->
+
+<!-- Xuất phát: Nhà thờ Đức Bà -->
+<wpt lat="10.779785" lon="106.699015">
+<time>2026-02-09T07:00:00Z</time>
+</wpt>
+
+<!-- Chạy dọc đường Lê Duẩn hướng Nam -->
+<wpt lat="10.779520" lon="106.698830">
+<time>2026-02-09T07:00:05Z</time>
+</wpt>
+<wpt lat="10.779250" lon="106.698640">
+<time>2026-02-09T07:00:10Z</time>
+</wpt>
+<wpt lat="10.778980" lon="106.698450">
+<time>2026-02-09T07:00:15Z</time>
+</wpt>
+<wpt lat="10.778710" lon="106.698260">
+<time>2026-02-09T07:00:20Z</time>
+</wpt>
+<wpt lat="10.778440" lon="106.698070">
+<time>2026-02-09T07:00:25Z</time>
+</wpt>
+<wpt lat="10.778170" lon="106.697880">
+<time>2026-02-09T07:00:30Z</time>
+</wpt>
+<wpt lat="10.777900" lon="106.697690">
+<time>2026-02-09T07:00:35Z</time>
+</wpt>
+<wpt lat="10.777630" lon="106.697500">
+<time>2026-02-09T07:00:40Z</time>
+</wpt>
+
+<!-- Rẽ trái vào Nam Kỳ Khởi Nghĩa, hướng về Dinh Độc Lập -->
+<wpt lat="10.777400" lon="106.697250">
+<time>2026-02-09T07:00:45Z</time>
+</wpt>
+<wpt lat="10.777150" lon="106.696980">
+<time>2026-02-09T07:00:50Z</time>
+</wpt>
+<wpt lat="10.776900" lon="106.696710">
+<time>2026-02-09T07:00:55Z</time>
+</wpt>
+<wpt lat="10.776650" lon="106.696440">
+<time>2026-02-09T07:01:00Z</time>
+</wpt>
+
+<!-- Đi ngang qua Dinh Độc Lập -->
+<wpt lat="10.776400" lon="106.696170">
+<time>2026-02-09T07:01:05Z</time>
+</wpt>
+<wpt lat="10.776150" lon="106.695900">
+<time>2026-02-09T07:01:10Z</time>
+</wpt>
+<wpt lat="10.775900" lon="106.695750">
+<time>2026-02-09T07:01:15Z</time>
+</wpt>
+
+<!-- Chạy qua Công viên 30/4 -->
+<wpt lat="10.775620" lon="106.695600">
+<time>2026-02-09T07:01:20Z</time>
+</wpt>
+<wpt lat="10.775340" lon="106.695780">
+<time>2026-02-09T07:01:25Z</time>
+</wpt>
+<wpt lat="10.775060" lon="106.695960">
+<time>2026-02-09T07:01:30Z</time>
+</wpt>
+<wpt lat="10.774780" lon="106.696140">
+<time>2026-02-09T07:01:35Z</time>
+</wpt>
+<wpt lat="10.774500" lon="106.696320">
+<time>2026-02-09T07:01:40Z</time>
+</wpt>
+<wpt lat="10.774220" lon="106.696500">
+<time>2026-02-09T07:01:45Z</time>
+</wpt>
+
+<!-- Rẽ phải vào đường Lê Lợi hướng về Nguyễn Huệ -->
+<wpt lat="10.774050" lon="106.696800">
+<time>2026-02-09T07:01:50Z</time>
+</wpt>
+<wpt lat="10.773900" lon="106.697150">
+<time>2026-02-09T07:01:55Z</time>
+</wpt>
+<wpt lat="10.773750" lon="106.697500">
+<time>2026-02-09T07:02:00Z</time>
+</wpt>
+<wpt lat="10.773600" lon="106.697850">
+<time>2026-02-09T07:02:05Z</time>
+</wpt>
+<wpt lat="10.773450" lon="106.698200">
+<time>2026-02-09T07:02:10Z</time>
+</wpt>
+<wpt lat="10.773300" lon="106.698550">
+<time>2026-02-09T07:02:15Z</time>
+</wpt>
+
+<!-- Phố đi bộ Nguyễn Huệ - chạy ngược lên phía Bắc -->
+<wpt lat="10.773400" lon="106.698900">
+<time>2026-02-09T07:02:20Z</time>
+</wpt>
+<wpt lat="10.773650" lon="106.699050">
+<time>2026-02-09T07:02:25Z</time>
+</wpt>
+<wpt lat="10.773900" lon="106.699100">
+<time>2026-02-09T07:02:30Z</time>
+</wpt>
+<wpt lat="10.774150" lon="106.699150">
+<time>2026-02-09T07:02:35Z</time>
+</wpt>
+<wpt lat="10.774400" lon="106.699200">
+<time>2026-02-09T07:02:40Z</time>
+</wpt>
+<wpt lat="10.774650" lon="106.699250">
+<time>2026-02-09T07:02:45Z</time>
+</wpt>
+<wpt lat="10.774900" lon="106.699300">
+<time>2026-02-09T07:02:50Z</time>
+</wpt>
+<wpt lat="10.775150" lon="106.699280">
+<time>2026-02-09T07:02:55Z</time>
+</wpt>
+
+<!-- Rẽ vào đường Đồng Khởi - chạy ngược lên Nhà thờ Đức Bà -->
+<wpt lat="10.775400" lon="106.699200">
+<time>2026-02-09T07:03:00Z</time>
+</wpt>
+<wpt lat="10.775700" lon="106.699150">
+<time>2026-02-09T07:03:05Z</time>
+</wpt>
+<wpt lat="10.776000" lon="106.699100">
+<time>2026-02-09T07:03:10Z</time>
+</wpt>
+<wpt lat="10.776300" lon="106.699050">
+<time>2026-02-09T07:03:15Z</time>
+</wpt>
+<wpt lat="10.776600" lon="106.699000">
+<time>2026-02-09T07:03:20Z</time>
+</wpt>
+<wpt lat="10.776900" lon="106.698950">
+<time>2026-02-09T07:03:25Z</time>
+</wpt>
+<wpt lat="10.777200" lon="106.698950">
+<time>2026-02-09T07:03:30Z</time>
+</wpt>
+<wpt lat="10.777500" lon="106.698980">
+<time>2026-02-09T07:03:35Z</time>
+</wpt>
+<wpt lat="10.777800" lon="106.699000">
+<time>2026-02-09T07:03:40Z</time>
+</wpt>
+<wpt lat="10.778100" lon="106.699000">
+<time>2026-02-09T07:03:45Z</time>
+</wpt>
+<wpt lat="10.778400" lon="106.699000">
+<time>2026-02-09T07:03:50Z</time>
+</wpt>
+<wpt lat="10.778700" lon="106.699000">
+<time>2026-02-09T07:03:55Z</time>
+</wpt>
+<wpt lat="10.779000" lon="106.699000">
+<time>2026-02-09T07:04:00Z</time>
+</wpt>
+<wpt lat="10.779300" lon="106.699010">
+<time>2026-02-09T07:04:05Z</time>
+</wpt>
+<wpt lat="10.779550" lon="106.699015">
+<time>2026-02-09T07:04:10Z</time>
+</wpt>
+
+<!-- Về đích: Nhà thờ Đức Bà -->
+<wpt lat="10.779785" lon="106.699015">
+<time>2026-02-09T07:04:15Z</time>
+</wpt>
+
+</gpx>
