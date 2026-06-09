@@ -31,6 +31,9 @@ abstract class VietmapTrackingPlatform extends PlatformInterface {
   /// The [metadata] map is merged into the "metadata" field of each GPS payload.
   Future<void> setMetadata(Map<String, dynamic> metadata);
 
+  /// Set custom app signature to be sent as X-App-Signature header when fetching configuration.
+  Future<void> setAppSignature(String signature);
+
   Future<bool> configureAlertAPI(String apiKey, String apiID);
   Future<bool> setAutoUpload(bool enabled);
 

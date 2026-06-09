@@ -224,6 +224,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             initializeTracking(call, result: result)
         case "setMetadata":
             setMetadata(call, result: result)
+        case "setAppSignature":
+            setAppSignature(call, result: result)
         case "configureAlertAPI":
             configureAlertAPI(call, result: result)
         case "configureZoneNetworkV2":
@@ -548,6 +550,19 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         }
         nativeLog("setMetadata | keys=\(metadata.keys.sorted())")
         trackingManager.setMetadata(metadata as NSDictionary)
+        result(nil)
+    }
+
+    private func setAppSignature(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let signature = args["signature"] as? String else {
+            result(FlutterError(code: "INVALID_ARGUMENTS",
+                               message: "signature string is required",
+                               details: nil))
+            return
+        }
+        nativeLog("setAppSignature | signature=\(signature)")
+        trackingManager.setAppSignature(signature)
         result(nil)
     }
 

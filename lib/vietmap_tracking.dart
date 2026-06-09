@@ -114,6 +114,15 @@ class VietmapTrackingPlugin {
     }
   }
 
+  /// Set custom app signature to be sent as X-App-Signature header when fetching configuration.
+  Future<void> setAppSignature(String signature) async {
+    try {
+      await _method.invokeMethod<void>('setAppSignature', {'signature': signature});
+    } on PlatformException {
+      rethrow;
+    }
+  }
+
   /// Configure the tracking SDK.
   ///
   /// Must be called before any other method.

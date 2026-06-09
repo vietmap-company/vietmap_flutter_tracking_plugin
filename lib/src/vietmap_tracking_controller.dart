@@ -128,6 +128,15 @@ class VietmapTrackingController with WidgetsBindingObserver {
     }
   }
 
+  /// Set custom app signature to be sent as X-App-Signature header when fetching configuration.
+  Future<void> setAppSignature(String signature) async {
+    try {
+      await _platform.setAppSignature(signature);
+    } catch (e) {
+      debugPrint('Failed to setAppSignature: $e');
+    }
+  }
+
   /// Configure Alert API for speed monitoring
   Future<bool> configureAlertAPI(String apiKey, String apiID) async {
     if (!_isConfigured) {

@@ -77,6 +77,15 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   }
 
   @override
+  Future<void> setAppSignature(String signature) async {
+    try {
+      await _channel.invokeMethod<void>('setAppSignature', {'signature': signature});
+    } on PlatformException catch (e) {
+      throw Exception('Failed to setAppSignature: ${e.message}');
+    }
+  }
+
+  @override
   Future<bool> configureAlertAPI(String apiKey, String apiID) async {
     try {
       final args = {'apiKey': apiKey, 'apiID': apiID};

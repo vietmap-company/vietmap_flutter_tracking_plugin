@@ -319,6 +319,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             "configure" -> handleConfigure(call, result)
             "initializeTracking" -> handleInitializeTracking(call, result)
             "setMetadata" -> handleSetMetadata(call, result)
+            "setAppSignature" -> handleSetAppSignature(call, result)
             "configureAlertAPI" -> handleConfigureAlertAPI(call, result)
 
             // Permissions
@@ -431,6 +432,22 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 result.success(null)
             } catch (e: Exception) {
                 result.error("SET_METADATA_FAILED", e.message, null)
+            }
+        }
+    }
+
+    private fun handleSetAppSignature(call: MethodCall, result: Result) {
+        withSection("Set App Signature") {
+            try {
+                val signature = call.argument<String>("signature")
+                if (signature != null) {
+                    vietmapSDK.setAppSignature(signature)
+                    result.success(true)
+                } else {
+                    result.error("INVALID_ARGUMENTS", "signature is required", null)
+                }
+            } catch (e: Exception) {
+                result.error("SET_APP_SIGNATURE_FAILED", e.message, null)
             }
         }
     }
