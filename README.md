@@ -60,8 +60,8 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 | Platform | SDK | Version |
 |----------|-----|---------|
-| iOS | VietmapTrackingSDK (CocoaPods) | 1.4.3 |
-| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.4.4 |
+| iOS | VietmapTrackingSDK (CocoaPods) | 1.4.7 |
+| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.4.6 |
 
 ---
 
@@ -69,7 +69,7 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 ```yaml
 dependencies:
-  vietmap_tracking_plugin: ^1.0.7
+  vietmap_tracking_plugin: ^1.0.8
 ```
 
 ```bash
@@ -639,7 +639,7 @@ LocationUtils.isWithinRadius(location, targetLat, targetLng, radiusMetres);
 │   Swift              │  Kotlin                   │
 ├──────────────────────┼───────────────────────────┤
 │  VietmapTrackingSDK  │  vietmap-tracking-sdk     │
-│  1.4.5 (CocoaPods)   │  1.4.4 (JitPack)          │
+│  1.4.7 (CocoaPods)   │  1.4.6 (JitPack)          │
 └──────────────────────┴───────────────────────────┘
 ```
 

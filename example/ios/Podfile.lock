@@ -22,7 +22,7 @@ PODS:
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
-  - vietmap_tracking_plugin (1.0.7):
+  - vietmap_tracking_plugin (1.0.8):
     - Flutter
     - VietmapTrackingSDK (= 1.4.7)
   - VietmapTrackingSDK (1.4.7)
@@ -84,7 +84,7 @@ SPEC CHECKSUMS:
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
-  vietmap_tracking_plugin: 243aaeeb42a1cad28a3641d1d60fb5bc0d289e5f
+  vietmap_tracking_plugin: 603187a59ad761878a3906c81316d1c9b37f9355
   VietmapTrackingSDK: e19563fa94704b977aa0cfecc1f76c6ca09b4145
 
 PODFILE CHECKSUM: fc6d03519386de69a43ce31e56f46553a8dffd86

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.8] - 2026-06-09
+
+### Added
+
+- **`setAppSignature(signature)`** — New API to set a custom application signature token. This signature is sent via the `X-App-Signature` HTTP header when dynamically retrieving configuration from the backend.
+
+### Changed
+
+- **Firebase SDK Removal** — Completely removed Firebase dependencies (`firebase_core`, `firebase_remote_config`) and options initialization from the tracking plugin controller and the example app. Configuration, including SSL pinning certificate hashes, is now resolved and cached dynamically by native HTTP requests.
+- **Native SDK updates** — Upgraded the Android native tracking SDK dependency to `1.4.6` and the iOS native dependency to `1.4.7`.
+- **Dynamic configuration resolution** — Added domain normalization mapping in the native SDK layer for `app-config` retrieval when standard base URLs are supplied.
+
+### Fixed
+
+- **iOS bridging cleanup** — Cleaned up redundant local parameter checking and helper variables in `VietmapTrackingPlugin.swift` for cleaner Swift optional type integration.
+
 ## [1.0.7] - 2026-05-12
 
 ### Added
