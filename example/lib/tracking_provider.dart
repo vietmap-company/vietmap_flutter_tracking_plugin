@@ -30,9 +30,11 @@ class TrackingProvider extends ChangeNotifier {
 
   // ── Tracking state ───────────────────────────────────────────────
   bool isTracking = false;
+
   /// True while startTracking() native call is in-flight.
   /// UI reacts immediately (button disables / shows spinner) before native returns.
   bool isStartingTracking = false;
+
   /// True while stopTracking() native call is in-flight.
   /// Used to disable Stop button and show deterministic loading feedback.
   bool isStoppingTracking = false;
@@ -42,7 +44,6 @@ class TrackingProvider extends ChangeNotifier {
   get trackingWithTimer => _trackingWithTimer;
   bool _trackingWithDistance = false;
   get trackingWithDistance => _trackingWithDistance;
-
 
   LocationData? currentLocation;
   TrackingStatus? trackingStatus;
@@ -89,6 +90,7 @@ class TrackingProvider extends ChangeNotifier {
   bool _initialized = false;
   String? initError;
   bool isSdkConfigured = false;
+  bool isConfiguringSdk = false;
   String _apiKey = '';
 
   // ── Internal subscriptions ────────────────────────────────────────
@@ -180,18 +182,31 @@ class TrackingProvider extends ChangeNotifier {
     String? alertApiKey,
     String? alertApiId,
   }) async {
-    _logSection('Configure SDK');
-    try {
-      debugPrint('Provider: initializeTracking + setMetadata + configureAlertAPI');
+    if (isConfiguringSdk) {
+      debugPrint('Provider: configureSdk already in progress. Ignoring duplicate call.');
+      return;
+    }
+    if (isSdkConfigured && _apiKey == apiKey && _controller.isConfigured) {
+      debugPrint('Provider: configureSdk already complete. Ignoring duplicate call.');
+      return;
+    }
 
-      // 1. Validate API key against server and initialize SDK.
-      //    Throws PlatformException(code: 'INVALID_API_KEY') if rejected.
-      await _controller.initializeTracking(
-        apiKey,
-        baseURL: baseURL,
+    _logSection('Configure SDK');
+    isConfiguringSdk = true;
+    initError = null;
+    notifyListeners();
+
+    try {
+      debugPrint(
+        'Provider: initializeTracking + setMetadata + configureAlertAPI',
       );
 
-      // 2. Attach metadata to every GPS record uploaded (optional).
+
+      // 2. Validate API key against server and initialize SDK.
+      //    Throws PlatformException(code: 'INVALID_API_KEY') if rejected.
+      await _controller.initializeTracking(apiKey, baseURL: baseURL);
+
+      // 3. Attach metadata to every GPS record uploaded (optional).
       await _controller.setMetadata({
         'userName': userEmail.isNotEmpty ? userEmail : 'anonymous',
         'appVersion': '1.0.0',
@@ -205,8 +220,10 @@ class TrackingProvider extends ChangeNotifier {
       );
 
       // 4. Configure speed-alert API (optional — only when credentials provided).
-      if (alertApiKey != null && alertApiKey.isNotEmpty &&
-          alertApiId != null && alertApiId.isNotEmpty) {
+      if (alertApiKey != null &&
+          alertApiKey.isNotEmpty &&
+          alertApiId != null &&
+          alertApiId.isNotEmpty) {
         await _controller.configureAlertAPI(alertApiKey, alertApiId);
       }
 
@@ -230,6 +247,8 @@ class TrackingProvider extends ChangeNotifier {
       notifyListeners();
       debugPrint('Failed to configure SDK: $e');
     } finally {
+      isConfiguringSdk = false;
+      notifyListeners();
       _logSection('Configure SDK', end: true);
     }
   }
@@ -284,8 +303,10 @@ class TrackingProvider extends ChangeNotifier {
 
     if (currentLocation != null && sessionStartTime != null) {
       final d = _haversine(
-        currentLocation!.latitude, currentLocation!.longitude,
-        loc.latitude, loc.longitude,
+        currentLocation!.latitude,
+        currentLocation!.longitude,
+        loc.latitude,
+        loc.longitude,
       );
       totalDistance += d;
       final elapsed = DateTime.now().difference(sessionStartTime!).inSeconds;
@@ -361,8 +382,7 @@ class TrackingProvider extends ChangeNotifier {
   // Config helpers
   // ─────────────────────────────────────────────────────────────────
 
-  String get effectiveUserId =>
-      userEmail.isNotEmpty ? userEmail : '';
+  String get effectiveUserId => userEmail.isNotEmpty ? userEmail : '';
 
   void toggleTrackingWithTimer(bool v) {
     _trackingWithTimer = v;
@@ -387,12 +407,11 @@ class TrackingProvider extends ChangeNotifier {
     );
   }
 
-
   /// - **Timer mode**: SDK fires an update every [customIntervalMs] milliseconds.
   ///   [distanceFilter] is null so movement is never required between updates.
   /// - **Distance mode**: SDK fires an update every [customDistanceFilter] metres.
   ///   [intervalMs] is null so time between updates is not capped.
- 
+
   LocationTrackingConfig _buildCustomConfig() {
     final LocationTrackingConfig base;
 
@@ -463,7 +482,9 @@ class TrackingProvider extends ChangeNotifier {
     // preset 'general' lên custom config của user
     if (useCustomConfig) {
       SmartBatteryManager.instance.customGeneralConfigOverride = () async {
-        debugPrint('[Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)');
+        debugPrint(
+          '[Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)',
+        );
         await _controller.updateTrackingConfig(activeConfig);
       };
     } else {
@@ -490,7 +511,9 @@ class TrackingProvider extends ChangeNotifier {
         averageSpeed = 0.0;
 
         _batterySub?.cancel();
-        _batterySub = _controller.onSmartBatteryProfileChanged.listen((profile) {
+        _batterySub = _controller.onSmartBatteryProfileChanged.listen((
+          profile,
+        ) {
           smartBatteryProfile = profile;
           notifyListeners();
         });
@@ -678,7 +701,9 @@ class TrackingProvider extends ChangeNotifier {
     if (isTracking) {
       if (v) {
         SmartBatteryManager.instance.customGeneralConfigOverride = () async {
-          debugPrint('[Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)');
+          debugPrint(
+            '[Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)',
+          );
           await _controller.updateTrackingConfig(activeConfig);
         };
       } else {
@@ -687,13 +712,38 @@ class TrackingProvider extends ChangeNotifier {
     }
     notifyListeners();
   }
-  void setCustomIntervalMs(int v) { customIntervalMs = v; notifyListeners(); }
-  void setCustomDistanceFilter(double v) { customDistanceFilter = v; notifyListeners(); }
-  void setCustomBackgroundMode(bool v) { customBackgroundMode = v; notifyListeners(); }
-  void setCacheConfigExpanded(bool v) { cacheConfigExpanded = v; notifyListeners(); }
-  void setMaxRecords(int v) { maxRecords = v; }
-  void setMaxDbSizeMb(int v) { maxDbSizeMb = v; }
-  void setBatchSize(int v) { batchSize = v; }
+
+  void setCustomIntervalMs(int v) {
+    customIntervalMs = v;
+    notifyListeners();
+  }
+
+  void setCustomDistanceFilter(double v) {
+    customDistanceFilter = v;
+    notifyListeners();
+  }
+
+  void setCustomBackgroundMode(bool v) {
+    customBackgroundMode = v;
+    notifyListeners();
+  }
+
+  void setCacheConfigExpanded(bool v) {
+    cacheConfigExpanded = v;
+    notifyListeners();
+  }
+
+  void setMaxRecords(int v) {
+    maxRecords = v;
+  }
+
+  void setMaxDbSizeMb(int v) {
+    maxDbSizeMb = v;
+  }
+
+  void setBatchSize(int v) {
+    batchSize = v;
+  }
 
   // ─────────────────────────────────────────────────────────────────
   // Fake GPS
@@ -705,11 +755,17 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> setFakeGpsNotificationConfig({required String title, required String message}) async {
+  Future<void> setFakeGpsNotificationConfig({
+    required String title,
+    required String message,
+  }) async {
     fakeGpsNotificationTitle = title;
     fakeGpsNotificationMessage = message;
     if (isSdkConfigured) {
-      await _controller.setFakeGpsNotificationConfig(title: title, message: message);
+      await _controller.setFakeGpsNotificationConfig(
+        title: title,
+        message: message,
+      );
     }
     notifyListeners();
   }
@@ -726,7 +782,8 @@ class TrackingProvider extends ChangeNotifier {
     if (Platform.isIOS) {
       final ios = _notifications
           .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>();
+            IOSFlutterLocalNotificationsPlugin
+          >();
       final result = await ios?.checkPermissions();
       return result?.isEnabled ?? false;
     }
@@ -742,8 +799,10 @@ class TrackingProvider extends ChangeNotifier {
     if (Platform.isIOS) {
       final ios = _notifications
           .resolvePlatformSpecificImplementation<
-              IOSFlutterLocalNotificationsPlugin>();
-      final granted = await ios?.requestPermissions(
+            IOSFlutterLocalNotificationsPlugin
+          >();
+      final granted =
+          await ios?.requestPermissions(
             alert: true,
             sound: true,
             badge: false,
@@ -809,6 +868,7 @@ class TrackingProvider extends ChangeNotifier {
         'vehicleId': 'vehicle_001',
         'userId': effectiveUserId,
         'apiEndpoint': 'https://staging.fleetwork.vn/api/v1/gps-tracking/history',
+        'apiEndpoint': 'https://staging.fleetwork.vn/api/v1/gps-tracking/history',
         'distanceFilter': 500.0,
       });
       slcEnabled = true;
@@ -857,7 +917,8 @@ class TrackingProvider extends ChangeNotifier {
     const r = 6371000.0;
     final dLat = _rad(lat2 - lat1);
     final dLon = _rad(lon2 - lon1);
-    final a = (_sin(dLat / 2) * _sin(dLat / 2)) +
+    final a =
+        (_sin(dLat / 2) * _sin(dLat / 2)) +
         (_cos(_rad(lat1)) * _cos(_rad(lat2)) * _sin(dLon / 2) * _sin(dLon / 2));
     return r * 2 * asin(sqrt(a));
   }

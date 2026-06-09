@@ -1,6 +1,7 @@
 import Flutter
 import UIKit
 import CoreLocation
+import Security
 import VietmapTrackingSDK
 
 public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
@@ -946,6 +947,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             toTime: toTime,
             pageNumber: pageNumber,
             pageSize: pageSize,
+            sortBy: "",
             sortDescending: sortDescending
         ) { [weak self] historyJson, errorCode, errorMessage in
             self?.nativeLog("getTrackingHistory callback | errorCode=\(errorCode ?? "nil") message=\(errorMessage ?? "nil")")

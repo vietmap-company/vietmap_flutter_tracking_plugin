@@ -349,5 +349,4 @@ class VietmapTrackingPlugin {
     } on PlatformException {
       rethrow;
     }
-  }
-}
+  }}

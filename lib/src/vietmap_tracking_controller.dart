@@ -99,10 +99,7 @@ class VietmapTrackingController with WidgetsBindingObserver {
   ///
   /// Must be called before [startTracking]. Can be called independently of
   /// [configure].
-  Future<void> initializeTracking(
-    String apiKey, {
-    String? baseURL,
-  }) async {
+  Future<void> initializeTracking(String apiKey, {String? baseURL}) async {
     _logSection('Initialize Tracking');
     try {
       debugPrint(
@@ -165,6 +162,8 @@ class VietmapTrackingController with WidgetsBindingObserver {
     }
   }
 
+
+
   // ── Smart Battery Optimization ────────────────────────────────
 
   /// Smart Battery Optimization **tự động bật** khi [startTracking] thành công
@@ -190,7 +189,9 @@ class VietmapTrackingController with WidgetsBindingObserver {
 
   /// **Deprecated**: Smart Battery tự động bật cùng [startTracking].
   /// Dùng [setSmartBatteryPreferredProfile] để đổi profile ưu tiên.
-  @Deprecated('Smart Battery is now auto-started with startTracking(). Use setSmartBatteryPreferredProfile() to change the preferred profile.')
+  @Deprecated(
+    'Smart Battery is now auto-started with startTracking(). Use setSmartBatteryPreferredProfile() to change the preferred profile.',
+  )
   Future<void> enableSmartBatteryOptimization({
     SmartBatteryProfile preferredMovingProfile = SmartBatteryProfile.general,
   }) async {
@@ -320,7 +321,11 @@ class VietmapTrackingController with WidgetsBindingObserver {
     _requireConfigured();
     _logSection('Start Tracking SDK');
     if (config.userId == null || config.userId!.trim().isEmpty) {
-      throw ArgumentError.value(config.userId, 'userId', 'userId is required to start tracking');
+      throw ArgumentError.value(
+        config.userId,
+        'userId',
+        'userId is required to start tracking',
+      );
     }
     try {
       debugPrint(
@@ -645,7 +650,10 @@ class VietmapTrackingController with WidgetsBindingObserver {
     required String message,
   }) async {
     try {
-      await _platform.setFakeGpsNotificationConfig(title: title, message: message);
+      await _platform.setFakeGpsNotificationConfig(
+        title: title,
+        message: message,
+      );
     } catch (e) {
       debugPrint('Failed to setFakeGpsNotificationConfig: $e');
     }
@@ -718,37 +726,42 @@ class VietmapTrackingController with WidgetsBindingObserver {
 
   bool _looksLikeLocationMap(Map<String, dynamic> map) {
     final lat = _readDouble(map, const ['latitude', 'Latitude', 'lat', 'Lat']);
-    final lng = _readDouble(
-      map,
-      const ['longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon'],
-    );
+    final lng = _readDouble(map, const [
+      'longitude',
+      'Longitude',
+      'lng',
+      'Lng',
+      'lon',
+      'Lon',
+    ]);
     return lat != null && lng != null;
   }
 
   GpsLocation? _toGpsLocation(Map<String, dynamic> map) {
     final lat = _readDouble(map, const ['latitude', 'Latitude', 'lat', 'Lat']);
-    final lng = _readDouble(
-      map,
-      const ['longitude', 'Longitude', 'lng', 'Lng', 'lon', 'Lon'],
-    );
+    final lng = _readDouble(map, const [
+      'longitude',
+      'Longitude',
+      'lng',
+      'Lng',
+      'lon',
+      'Lon',
+    ]);
 
     if (lat == null || lng == null) {
       return null;
     }
 
-    final timestampMs = _readTimestampMillis(
-      map,
-      const [
-        'timestamp',
-        'Timestamp',
-        'time',
-        'Time',
-        'createdAt',
-        'CreatedAt',
-        'recordedAt',
-        'RecordedAt',
-      ],
-    );
+    final timestampMs = _readTimestampMillis(map, const [
+      'timestamp',
+      'Timestamp',
+      'time',
+      'Time',
+      'createdAt',
+      'CreatedAt',
+      'recordedAt',
+      'RecordedAt',
+    ]);
 
     return GpsLocation(
       latitude: lat,
@@ -756,17 +769,21 @@ class VietmapTrackingController with WidgetsBindingObserver {
       altitude: _readDouble(map, const ['altitude', 'Altitude']),
       accuracy: _readDouble(map, const ['accuracy', 'Accuracy']),
       speed: _readDouble(map, const ['speed', 'Speed']),
-      heading: _readDouble(
-        map,
-        const ['heading', 'Heading', 'bearing', 'Bearing'],
-      ),
+      heading: _readDouble(map, const [
+        'heading',
+        'Heading',
+        'bearing',
+        'Bearing',
+      ]),
       timestamp: timestampMs == null
           ? null
           : DateTime.fromMillisecondsSinceEpoch(timestampMs),
-      displayAddress: _readString(
-        map,
-        const ['displayAddress', 'DisplayAddress', 'address', 'Address'],
-      ),
+      displayAddress: _readString(map, const [
+        'displayAddress',
+        'DisplayAddress',
+        'address',
+        'Address',
+      ]),
       metadata: map,
     );
   }

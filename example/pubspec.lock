@@ -74,7 +74,7 @@ packages:
     source: hosted
     version: "1.19.1"
   connectivity_plus:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: connectivity_plus
       sha256: "051849e2bd7c7b3bc5844ea0d096609ddc3a859890ec3a9ac4a65a2620cc1f99"
@@ -698,7 +698,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "1.0.6"
+    version: "1.0.7"
   vm_service:
     dependency: transitive
     description:

@@ -92,8 +92,7 @@ class VietmapTrackingPlugin :
             "configureTracking"      -> handleConfigureTracking(call, result)
             "configureZoneNetworkV2" -> handleConfigureZoneNetworkV2(call, result)
             "resetZoneNetworkV2"     -> handleResetZoneNetworkV2(result)
-            // initializeTracking and all other calls → legacy plugin so that
-            // legacy.isInitialized is set correctly before startTracking is called.
+            // All other calls → legacy plugin
             else                     -> legacy.onMethodCall(call, result)
         }
     }
