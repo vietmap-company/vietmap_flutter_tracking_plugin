@@ -24,8 +24,8 @@ PODS:
     - FlutterMacOS
   - vietmap_tracking_plugin (1.0.7):
     - Flutter
-    - VietmapTrackingSDK
-  - VietmapTrackingSDK (1.0.0)
+    - VietmapTrackingSDK (= 1.4.7)
+  - VietmapTrackingSDK (1.4.7)
 
 DEPENDENCIES:
   - background_location_2 (from `.symlinks/plugins/background_location_2/ios`)
@@ -40,7 +40,11 @@ DEPENDENCIES:
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - vietmap_tracking_plugin (from `.symlinks/plugins/vietmap_tracking_plugin/ios`)
-  - VietmapTrackingSDK (from `/Volumes/240GB/New-Develop/map-sdk-tracking/ios`)
+  - VietmapTrackingSDK (= 1.4.7)
+
+SPEC REPOS:
+  https://github.com/CocoaPods/Specs.git:
+    - VietmapTrackingSDK
 
 EXTERNAL SOURCES:
   background_location_2:
@@ -67,8 +71,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   vietmap_tracking_plugin:
     :path: ".symlinks/plugins/vietmap_tracking_plugin/ios"
-  VietmapTrackingSDK:
-    :path: "/Volumes/240GB/New-Develop/map-sdk-tracking/ios"
 
 SPEC CHECKSUMS:
   background_location_2: 738e207c87ea5ee183a4e234d5766be4cdb019a7
@@ -82,9 +84,9 @@ SPEC CHECKSUMS:
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
-  vietmap_tracking_plugin: 1758447fc6f318bffc663fd411d1510450691d66
-  VietmapTrackingSDK: 1ccceb4bd76acee6a053e9f2a0596b1481652a3e
+  vietmap_tracking_plugin: 243aaeeb42a1cad28a3641d1d60fb5bc0d289e5f
+  VietmapTrackingSDK: e19563fa94704b977aa0cfecc1f76c6ca09b4145
 
-PODFILE CHECKSUM: 2fe673004349be9ec7bfd097a1978a0efe8e527c
+PODFILE CHECKSUM: fc6d03519386de69a43ce31e56f46553a8dffd86
 
 COCOAPODS: 1.16.2

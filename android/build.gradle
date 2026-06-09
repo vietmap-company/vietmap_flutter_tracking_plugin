@@ -51,7 +51,7 @@ android {
 
     dependencies {
         // VietmapTrackingSDK for Android (JitPack)
-        implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.4.5'
+        implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.4.6'
         // implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.0.5'
         // Google Play Services for Location
         implementation 'com.google.android.gms:play-services-location:21.0.1'

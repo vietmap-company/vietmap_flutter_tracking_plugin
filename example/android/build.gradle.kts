@@ -1,6 +1,6 @@
 allprojects {
     repositories {
-        // mavenLocal() // Disabled: using JitPack package
+        // mavenLocal()
         google()
         mavenCentral()
         maven { url = uri("https://jitpack.io") }
