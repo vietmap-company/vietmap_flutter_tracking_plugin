@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.9] - 2026-06-20
+
+### Changed
+
+- **`getCurrentLocation()` now resolves an on-demand fix** — the method no longer depends on an active tracking session. It actively obtains the current device location (working even before `startTracking()`), falling back through in-memory cache → system last-known → a fresh active fix. Returns a meaningful error (`LOCATION_PERMISSION_DENIED`, `LOCATION_DISABLED`, `LOCATION_TIMEOUT`) instead of a generic "no location available" when a fix cannot be obtained.
+- **Native SDK update** — Upgraded the Android native tracking SDK dependency to `1.4.7`.
+
+---
+
 ## [1.0.8] - 2026-06-09
 
 ### Added

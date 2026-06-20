@@ -69,7 +69,7 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 ```yaml
 dependencies:
-  vietmap_tracking_plugin: ^1.0.8
+  vietmap_tracking_plugin: ^1.0.9
 ```
 
 ```bash
@@ -478,7 +478,7 @@ SmartBatteryManager.instance.customGeneralConfigOverride = null;
 | `startTracking(config)` | `bool` | Start GPS tracking. `userId` in config is required. |
 | `stopTracking()` | `bool` | Stop tracking; SDK may flush pending records. |
 | `isTrackingActive()` | `bool` | Whether tracking is currently running. |
-| `getCurrentLocation()` | `LocationData?` | Most recent known location. `null` if no fix yet. |
+| `getCurrentLocation()` | `LocationData` | Actively resolves the current device location on demand — works even before `startTracking()`. Throws if the location cannot be resolved (permission denied, location services off, or timeout). |
 | `getTrackingStatus()` | `TrackingStatus` | Live status snapshot. |
 | `updateTrackingConfig(config)` | `bool` | Apply new config to running session. See platform note. |
 | `getTrackingHealthStatus()` | `Map` | Diagnostic snapshot: network, cache, SDK flags. |

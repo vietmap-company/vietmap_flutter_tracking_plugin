@@ -330,7 +330,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             // Tracking
             "startTracking" -> handleStartTracking(call, result)
             "stopTracking" -> handleStopTracking(result)
-            "getCurrentLocation" -> handleGetCurrentLocation(result)
+            "getCurrentLocation" -> handleGetCurrentLocation(call, result)
             "isTrackingActive" -> handleIsTrackingActive(result)
             "getTrackingStatus" -> handleGetTrackingStatus(result)
             "getTrackingHealthStatus" -> handleGetTrackingHealthStatus(result)
@@ -953,36 +953,44 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
     /**
      * getCurrentLocation() → LocationData map
-     *
-     * Matches iOS: trackingManager.getCurrentLocation() -> NSDictionary?
-     *
      * Uses VietmapTrackingSDK.getLastLocation() to return the most recent known location.
      */
-    private fun handleGetCurrentLocation(result: Result) {
-        withSection("Get Current Location") {
-            if (!isInitialized) {
-                result.error("SDK_NOT_INITIALIZED", "VietmapTrackingSDK not initialized", null)
-                return
-            }
+    private fun handleGetCurrentLocation(call: MethodCall, result: Result) {
+        logSection("Get Current Location")
+        if (!isInitialized) {
+            result.error("SDK_NOT_INITIALIZED", "VietmapTrackingSDK not initialized", null)
+            logSection("Get Current Location", end = true)
+            return
+        }
 
-            try {
-                val location: VMLocation? = vietmapSDK.getLastLocation();
-                if (location != null) {
+        val timeoutMs = (call.argument<Number>("timeoutMs"))?.toInt() ?: 5000
+        val maxAgeMs = (call.argument<Number>("maxAgeMs"))?.toLong() ?: 10000L
+
+        try {
+            vietmapSDK.getCurrentLocation(maxAgeMs, timeoutMs, object : VietmapTrackingSDK.LocationResultCallback {
+                override fun onResult(location: VMLocation, source: String, ageMs: Long) {
                     val locationMap = mapOf(
                         "lat" to location.lat,
                         "lng" to location.lng,
                         "accuracy" to location.accuracy,
                         "speed" to location.speed,
                         "heading" to location.bearing,
-                        "timestamp" to location.timestamp
+                        "timestamp" to location.timestamp,
+                        "source" to source,
+                        "ageMs" to ageMs
                     )
                     result.success(locationMap)
-                } else {
-                    result.error("LOCATION_UNAVAILABLE", "No location available yet", null)
+                    logSection("Get Current Location", end = true)
                 }
-            } catch (e: Exception) {
-                result.error("LOCATION_UNAVAILABLE", "Unable to get current location: ${e.message}", null)
-            }
+
+                override fun onError(code: String, message: String) {
+                    result.error(code, message, null)
+                    logSection("Get Current Location", end = true)
+                }
+            })
+        } catch (e: Exception) {
+            result.error("LOCATION_UNAVAILABLE", "Unable to get current location: ${e.message}", null)
+            logSection("Get Current Location", end = true)
         }
     }
 
