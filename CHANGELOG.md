@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-06-22
+
+### Fixed
+
+- **Crash on Android 10/11/12 (`NoSuchMethodError: readAllBytes`)** — The native tracking SDK read HTTP responses with `InputStream.readAllBytes()`, an API only available from Android 13 (API 33). On Android 10–12 (API 29–32) this threw a fatal `java.lang.NoSuchMethodError` when the SDK read response bodies — e.g. while fetching `app-config` during initialization and while calling `getTrackingHistory()`. Replaced with an API-level-compatible byte reader, restoring support for Android 10 and above.
+
+### Changed
+
+- **Native SDK update** — Upgraded the Android native tracking SDK dependency to `1.4.8`.
+
+---
+
 ## [1.0.9] - 2026-06-20
 
 ### Changed
