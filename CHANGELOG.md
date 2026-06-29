@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.1] - 2026-06-29
+
+### Added
+
+- **Speed fallback for devices that report no/zero speed** — On some devices (notably Xiaomi/MIUI under aggressive battery management) GPS fixes arrive without a valid speed, or with `speed = 0` while the vehicle is clearly moving, so the server recorded `0`. The native SDK now **derives the speed** from the Haversine distance to the previous fix over the elapsed time when the OS speed is missing or implausibly low versus the actual movement. It is validated against fix accuracy and time gap and passed through a sliding-window outlier clamp so a single GPS jump cannot produce a spike; a valid hardware speed is always trusted and truly stationary fixes stay `0`. Enabled by default — toggle with `LocationTrackingConfig(enableSpeedFallback: false)` to keep the raw OS speed. Each uploaded record is tagged under `metadata.speedSource`: `gps` (hardware), `derived` (computed, OS gave none), `corrected` (OS speed ~0 while moving → computed), or `unknown` (no speed and could not be derived).
+
+### Changed
+
+- **Native SDK update** — Upgraded the Android native tracking SDK dependency to `1.4.9` and the iOS native dependency to `1.4.8`.
+
+---
+
 ## [1.1.0] - 2026-06-22
 
 ### Fixed

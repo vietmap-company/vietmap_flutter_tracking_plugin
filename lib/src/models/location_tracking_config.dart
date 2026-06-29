@@ -31,6 +31,11 @@ class LocationTrackingConfig {
   /// Set to false and call [VietmapTrackingController.setFakeGpsPolicy] to enable detection.
   final bool allowMockLocation;
 
+  /// Whether to derive speed from Haversine distance/time when the OS omits speed
+  /// (e.g. network/fused fixes on Xiaomi/MIUI report speed = 0 / -1). Default true.
+  /// Set to false to always report the raw OS speed.
+  final bool enableSpeedFallback;
+
   const LocationTrackingConfig({
     this.intervalMs,
     this.distanceFilter,
@@ -42,6 +47,7 @@ class LocationTrackingConfig {
     this.vehicleId,
     this.apiEndpoint,
     this.allowMockLocation = true,
+    this.enableSpeedFallback = true,
   });
 
   /// Convert to JSON for platform channel
@@ -56,6 +62,7 @@ class LocationTrackingConfig {
     'vehicleId': vehicleId,
     'apiEndpoint': apiEndpoint,
     'allowMockLocation': allowMockLocation,
+    'enableSpeedFallback': enableSpeedFallback,
   };
 
   /// Create from JSON
@@ -71,6 +78,7 @@ class LocationTrackingConfig {
       vehicleId: json['vehicleId'] as String?,
       apiEndpoint: json['apiEndpoint'] as String?,
       allowMockLocation: json['allowMockLocation'] as bool? ?? true,
+      enableSpeedFallback: json['enableSpeedFallback'] as bool? ?? true,
     );
   }
 
@@ -86,6 +94,7 @@ class LocationTrackingConfig {
     String? vehicleId,
     String? apiEndpoint,
     bool? allowMockLocation,
+    bool? enableSpeedFallback,
   }) {
     return LocationTrackingConfig(
       intervalMs: intervalMs ?? this.intervalMs,
@@ -98,6 +107,7 @@ class LocationTrackingConfig {
       vehicleId: vehicleId ?? this.vehicleId,
       apiEndpoint: apiEndpoint ?? this.apiEndpoint,
       allowMockLocation: allowMockLocation ?? this.allowMockLocation,
+      enableSpeedFallback: enableSpeedFallback ?? this.enableSpeedFallback,
     );
   }
 }

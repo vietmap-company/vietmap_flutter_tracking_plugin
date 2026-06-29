@@ -40,6 +40,7 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 | Metadata Attachment | `setMetadata` stamps every GPS record with arbitrary key-value pairs |
 | Speed Alerts | Real-time speed monitoring via configurable Alert API |
 | Offline Cache | SQLite cache with auto-upload when network recovers |
+| Speed Fallback | Derives speed from position when the OS reports no/zero speed while moving (Xiaomi/MIUI); tags each fix with `speedSource` |
 | Fake GPS Detection | Native detection with 4 configurable response policies; SDK issues its own notification even when app is killed |
 | Smart Battery | Auto-adjusts tracking precision based on battery level and movement |
 | Tracking Presets | Navigation / Fitness / General / BatterySaver — interval and distance variants |
@@ -370,6 +371,38 @@ await controller.setFakeGpsPolicy(FakeGpsPolicy.warn);
 ### iOS note
 
 On iOS the app icon always appears as the notification icon. The `reason` field in `FakeGpsEvent` can be `"simulatedBySoftware"` or `"producedByAccessory"`.
+
+---
+
+## Speed Fallback
+
+Some devices — notably Xiaomi/MIUI under aggressive battery management — deliver GPS fixes **without a valid speed** (or report `speed = 0` while the vehicle is clearly moving). By default the SDK detects this and **derives the speed** from the Haversine distance to the previous fix over the elapsed time, so the value sent to the server reflects real motion instead of `0`.
+
+The fallback is conservative and self-correcting:
+
+- Triggers only when the OS speed is missing or implausibly low versus the actual movement; a valid hardware speed is always trusted.
+- Validated against fix accuracy and time gap, and runs through a sliding-window outlier clamp so a single GPS jump cannot produce a spike.
+- Truly stationary fixes stay `0`.
+
+Each uploaded record carries the origin under `metadata.speedSource`:
+
+| `speedSource` | Meaning |
+|---------------|---------|
+| `gps` | Hardware speed from the chip (trusted as-is) |
+| `derived` | OS reported no speed → computed from position/time |
+| `corrected` | OS reported a speed but it was ~0 while moving → replaced with the computed value |
+| `unknown` | No speed and the fallback could not be validated (sent as `0`) |
+
+Enabled by default. Turn it off (keep the raw OS speed) via `LocationTrackingConfig`:
+
+```dart
+await controller.startTracking(
+  TrackingPresets.general().copyWith(
+    userId: 'user-123',
+    enableSpeedFallback: false, // default true
+  ),
+);
+```
 
 ---
 

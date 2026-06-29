@@ -786,7 +786,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         let intervalMsInput = args?["intervalMs"] as? Int
         let distanceFilterInput = args?["distanceFilter"] as? Double
         let allowMockLocation = args?["allowMockLocation"] as? Bool ?? true
-        
+        let enableSpeedFallback = args?["enableSpeedFallback"] as? Bool ?? true
+
         // For logging only — -1 means "not set, SDK will use its default"
         let intervalMs = intervalMsInput ?? -1
         let distanceFilter = distanceFilterInput ?? -1.0
@@ -829,6 +830,10 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             trackingManager.setFakeGPSPolicy(currentFakeGpsPolicy)
         }
         nativeLog("[FakeGPS] allowMockLocation=\(allowMockLocation) policy='\(allowMockLocation ? "n/a (pass-through)" : currentFakeGpsPolicy)'")
+
+        // Haversine speed fallback (default on) — compute speed when iOS reports speed == -1
+        trackingManager.setEnableSpeedFallback(enableSpeedFallback)
+        nativeLog("[SpeedFallback] enabled=\(enableSpeedFallback)")
 
         // ── iOS Battery Optimization via CoreLocation ──
         if let vid = vehicleId, !vid.isEmpty {

@@ -844,6 +844,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 val notificationTitle = args?.get("notificationTitle") as? String
                 val notificationMessage = args?.get("notificationMessage") as? String
                 val allowMockLocation = args?.get("allowMockLocation") as? Boolean ?: false
+                val enableSpeedFallback = args?.get("enableSpeedFallback") as? Boolean ?: true
 
                 val userId = args?.get("userId") as? String
                 val vehicleId = args?.get("vehicleId") as? String
@@ -896,6 +897,13 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                     }
                 } catch (e: Exception) {
                     Log.w("VietmapTrackingPlugin", "setTrackingConfig(TrackingConfig) failed: ${e.message}")
+                }
+
+                // Toggle Haversine speed fallback (default on) — independent of TrackingConfig
+                try {
+                    vietmapSDK.setEnableSpeedFallback(enableSpeedFallback)
+                } catch (e: Exception) {
+                    Log.w("VietmapTrackingPlugin", "setEnableSpeedFallback failed: ${e.message}")
                 }
 
                 // Set metadata — must happen before startTracking()
