@@ -13,6 +13,7 @@ import 'widgets/permission_section.dart';
 import 'widgets/session_stats_card.dart';
 import 'widgets/smart_battery_card.dart';
 import 'widgets/speed_alert_card.dart';
+import 'widgets/tracking_interrupted_card.dart';
 import 'widgets/tracking_status_card.dart';
 import 'widgets/user_identity_card.dart';
 
@@ -59,7 +60,7 @@ class TrackingDemoPage extends StatefulWidget {
 
 class _TrackingDemoPageState extends State<TrackingDemoPage> {
   final _emailController = TextEditingController();
-  final _customIntervalController = TextEditingController(text: '5000');
+  final _customIntervalController = TextEditingController(text: '8000');
   final _customDistanceController = TextEditingController(text: '10');
   final _maxRecordsController = TextEditingController(text: '5000');
   final _maxDbSizeMbController = TextEditingController(text: '50');
@@ -234,6 +235,8 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
             const LocationCard(),
             const SizedBox(height: 16),
             const FakeGpsCard(),
+            const SizedBox(height: 16),
+            const TrackingInterruptedCard(),
             const SizedBox(height: 16),
             const SmartBatteryCard(),
             const SizedBox(height: 16),

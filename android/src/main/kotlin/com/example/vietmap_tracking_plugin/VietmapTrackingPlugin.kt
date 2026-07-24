@@ -79,6 +79,12 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
     private var locationCallback: VietmapTrackingSDK.LocationUpdateCallback? = null
     private var statusCallback: VietmapTrackingSDK.TrackingStatusCallback? = null
     private var fakeGpsCallback: VietmapTrackingSDK.FakeGPSCallback? = null
+    private var trackingInterruptedCallback: VietmapTrackingSDK.TrackingInterruptedCallback? = null
+
+    // One-shot callback dùng cho distance-only bootstrap: khi fix GPS đầu tiên về
+    // (nghĩa là Foreground Service đã promote an toàn) thì apply distanceFilter thật
+    // qua safeUpdateTrackingConfig rồi tự gỡ chính nó. Xem handleStartTracking.
+    private var distanceBootstrapCallback: VietmapTrackingSDK.LocationUpdateCallback? = null
 
     // Sync Logger: network monitor
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
@@ -116,6 +122,17 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         private const val TRACKING_STATUS_CHANNEL = "vietmap_tracking_plugin/tracking_status"
         private const val PERMISSION_REQUEST_CODE = 1001
         private const val BACKGROUND_PERMISSION_REQUEST_CODE = 1002
+
+        // Interval LẤY MẪU cho distance-only mode. PHẢI nhỏ, vì đây là tần suất location
+        // engine tính vị trí — và displacement (distanceFilter) chỉ được kiểm tra tại mỗi
+        // lần lấy mẫu. distanceFilter (smallestDisplacement) mới là điều kiện GHI điểm.
+        //
+        // Nếu để interval lớn (vd 1 giờ), engine ngủ tới đúng interval mới sample → dịch
+        // chuyển 25m ở giữa KHÔNG được phát hiện → không ghi điểm distance nào. Interval nhỏ
+        // KHÔNG tạo điểm theo thời gian vì displacement gate vẫn chặn khi đứng yên.
+        //
+        // 1000ms đủ dày để bắt mốc 25m ở tốc độ xe (vd 50km/h ≈ 14m/s → ~1.8s/25m).
+        private const val DISTANCE_MODE_INTERVAL_MS = 1000L
     }
 
     // ============================================================
@@ -237,6 +254,22 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 }
             }
             vietmapSDK.addFakeGPSCallback(fakeGpsCallback!!)
+
+            // Tracking interrupted — GPS stopped pushing in background / location unavailable /
+            // provider off / permission lost. SDK-owned payload; app cannot configure it.
+            trackingInterruptedCallback = VietmapTrackingSDK.TrackingInterruptedCallback {
+                reason, recovered, isInBackground, secondsSinceLastFix ->
+                mainHandler.post {
+                    val payload = mapOf(
+                        "reason" to reason,
+                        "recovered" to recovered,
+                        "isInBackground" to isInBackground,
+                        "secondsSinceLastFix" to secondsSinceLastFix
+                    )
+                    channel.invokeMethod("onTrackingInterrupted", payload)
+                }
+            }
+            vietmapSDK.addTrackingInterruptedCallback(trackingInterruptedCallback!!)
         }
     }
 
@@ -245,9 +278,12 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             locationCallback?.let { vietmapSDK.removeLocationCallback(it) }
             statusCallback?.let { vietmapSDK.removeStatusCallback(it) }
             fakeGpsCallback?.let { vietmapSDK.removeFakeGPSCallback(it) }
+            trackingInterruptedCallback?.let { vietmapSDK.removeTrackingInterruptedCallback(it) }
             locationCallback = null
             statusCallback = null
             fakeGpsCallback = null
+            trackingInterruptedCallback = null
+            clearDistanceBootstrapCallback()
         } catch (_: Exception) {
         }
     }
@@ -373,6 +409,12 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             // Fake GPS
             "setFakeGPSPolicy" -> handleSetFakeGPSPolicy(call, result)
             "setFakeGpsNotificationConfig" -> handleSetFakeGpsNotificationConfig(call, result)
+
+            // Tracking interrupted
+            "setTrackingInterruptedNotificationEnabled" ->
+                handleSetTrackingInterruptedNotificationEnabled(call, result)
+            "setTrackingInterruptedNotificationConfig" ->
+                handleSetTrackingInterruptedNotificationConfig(call, result)
 
             // Platform info
             "getPlatformVersion" -> result.success("Android ${Build.VERSION.RELEASE}")
@@ -863,7 +905,11 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
                 // Build TrackingConfig based on trigger mode (matches Dart TrackingPresets model):
                 //   Interval-only → set intervalMs, distanceFilter=0.0 (no displacement filter)
-                //   Distance-only → set distanceFilter, intervalMs=Long.MAX_VALUE (time never triggers)
+                //   Distance-only → BOOTSTRAP với interval thật + distanceFilter=0 để FGS
+                //                   promote an toàn, sau fix GPS đầu tiên mới switch sang
+                //                   distanceFilter thật qua safeUpdateTrackingConfig (không restart FGS).
+                //                   Nếu start thẳng distanceFilter, smallestDisplacement chặn fix đầu
+                //                   khi máy đứng yên → FGS không promote kịp 5s → tracking không start được.
                 //   Both null     → skip; SDK uses its internal defaults
                 try {
                     when {
@@ -876,12 +922,18 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                             vietmapSDK.setTrackingConfig(config)
                         }
                         distanceFilter != null && intervalMs == null -> {
-                            // Distance-only mode — matches TrackingPresets.*Distance() variants
-                            val config = TrackingConfig(
-                                Long.MAX_VALUE, distanceFilter,
+                            // Distance-only mode — matches TrackingPresets.*Distance() variants.
+                            // Interval GIỮ NGUYÊN nhỏ (DISTANCE_MODE_INTERVAL_MS) ở cả 2 pha; chỉ
+                            // distanceFilter đổi. Bootstrap = distanceFilter 0.0 để có fix đầu ngay
+                            // (promote FGS); sau fix đầu switch sang distanceFilter thật để gate 25m.
+                            val bootstrapConfig = TrackingConfig(
+                                DISTANCE_MODE_INTERVAL_MS, 0.0,
                                 false, allowMockLocation, 0.0, "high", backgroundMode
                             )
-                            vietmapSDK.setTrackingConfig(config)
+                            vietmapSDK.setTrackingConfig(bootstrapConfig)
+                            // Switch-on-first-fix: khi fix GPS đầu tiên về (FGS đã sống) thì apply
+                            // distanceFilter thật mà không restart Foreground Service.
+                            registerDistanceBootstrapSwitch(distanceFilter)
                         }
                         intervalMs != null && distanceFilter != null -> {
                             // Both explicitly provided — respect both as sent
@@ -949,6 +1001,8 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             }
 
             try {
+                // Gỡ one-shot bootstrap callback nếu stop trước khi có fix GPS đầu tiên.
+                clearDistanceBootstrapCallback()
                 vietmapSDK.stopTracking()
                 trackingStartTime = 0L
                 lastLocationTimestamp = 0L
@@ -1189,7 +1243,10 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
 
                 // Resolve effective values per trigger mode (mirrors Dart TrackingPresets model):
                 //   Interval-only: distanceFilter=0.0 (no displacement filter)
-                //   Distance-only: intervalMs=Long.MAX_VALUE (time never triggers)
+                //   Distance-only: intervalMs=DISTANCE_MODE_INTERVAL_MS (interval lấy mẫu nhỏ để
+                //     engine phát hiện dịch chuyển; distanceFilter mới gate việc ghi điểm).
+                //     Path này đi qua safeUpdateTrackingConfig (không restart FGS, service đã sống)
+                //     nên không cần bootstrap như handleStartTracking.
                 //   Both null: fall back to general preset (30s interval, no distance filter)
                 val effectiveInterval: Long
                 val effectiveDistance: Double
@@ -1199,7 +1256,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                         effectiveDistance = 0.0
                     }
                     distanceFilter != null && intervalMs == null -> {
-                        effectiveInterval = Long.MAX_VALUE
+                        effectiveInterval = DISTANCE_MODE_INTERVAL_MS
                         effectiveDistance = distanceFilter
                     }
                     intervalMs != null && distanceFilter != null -> {
@@ -1582,6 +1639,39 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
         }
     }
 
+    /**
+     * Distance-only bootstrap: đăng ký one-shot location callback. Khi fix GPS đầu tiên
+     * về (nghĩa là Foreground Service đã promote an toàn), switch từ bootstrap config
+     * (interval nền + distanceFilter=0) sang distance-gated mode thật qua
+     * [safeUpdateTrackingConfig] — KHÔNG restart Foreground Service.
+     *
+     * Nếu fix đầu không bao giờ về (không có tín hiệu GPS), callback không bắn → giữ
+     * nguyên bootstrap (tracking vẫn sống), đây là fallback an toàn thay vì fail start.
+     */
+    private fun registerDistanceBootstrapSwitch(distanceFilter: Double) {
+        clearDistanceBootstrapCallback()
+        val cb = VietmapTrackingSDK.LocationUpdateCallback { _ ->
+            // Chạy trên main thread để guard chống race khi nhiều fix về gần nhau.
+            mainHandler.post {
+                val current = distanceBootstrapCallback ?: return@post
+                distanceBootstrapCallback = null
+                try { vietmapSDK.removeLocationCallback(current) } catch (_: Exception) {}
+                Log.d("VietmapTrackingPlugin", "Distance bootstrap: first fix → apply distanceFilter=${distanceFilter}m")
+                safeUpdateTrackingConfig(DISTANCE_MODE_INTERVAL_MS, distanceFilter)
+            }
+        }
+        distanceBootstrapCallback = cb
+        vietmapSDK.addLocationCallback(cb)
+    }
+
+    /** Gỡ one-shot bootstrap callback nếu còn (vd stop trước khi có fix đầu). */
+    private fun clearDistanceBootstrapCallback() {
+        distanceBootstrapCallback?.let {
+            try { vietmapSDK.removeLocationCallback(it) } catch (_: Exception) {}
+        }
+        distanceBootstrapCallback = null
+    }
+
     // ============================================================
     // MARK: - App Lifecycle Forwarding
     // ============================================================
@@ -1632,6 +1722,39 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             result.success(null)
         } catch (e: Exception) {
             result.error("FAKE_GPS_NOTIFICATION_CONFIG_ERROR", e.message, null)
+        }
+    }
+
+    /**
+     * setTrackingInterruptedNotificationEnabled(enabled: Boolean)
+     * Enable/disable the local notification shown when tracking is interrupted in background.
+     */
+    private fun handleSetTrackingInterruptedNotificationEnabled(call: MethodCall, result: Result) {
+        try {
+            val enabled = call.argument<Boolean>("enabled") ?: true
+            vietmapSDK.setTrackingInterruptedNotificationEnabled(enabled)
+            result.success(null)
+        } catch (e: Exception) {
+            result.error("TRACKING_INTERRUPTED_ENABLED_ERROR", e.message, null)
+        }
+    }
+
+    /**
+     * setTrackingInterruptedNotificationConfig(title: String, message: String)
+     * Customise the interrupted local-notification strings (channel reason/payload is SDK-owned).
+     */
+    private fun handleSetTrackingInterruptedNotificationConfig(call: MethodCall, result: Result) {
+        try {
+            val title = call.argument<String>("title")
+            val message = call.argument<String>("message")
+            if (title.isNullOrBlank() || message.isNullOrBlank()) {
+                result.error("INVALID_ARGUMENTS", "title and message are required", null)
+                return
+            }
+            vietmapSDK.setTrackingInterruptedNotificationConfig(title, message)
+            result.success(null)
+        } catch (e: Exception) {
+            result.error("TRACKING_INTERRUPTED_CONFIG_ERROR", e.message, null)
         }
     }
 

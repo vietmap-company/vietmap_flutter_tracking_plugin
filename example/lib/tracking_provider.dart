@@ -56,11 +56,16 @@ class TrackingProvider extends ChangeNotifier {
 
   // ── Config ───────────────────────────────────────────────────────
   bool useCustomConfig = false;
-  int customIntervalMs = 5000;
+  // 8s timer interval for testing (SDK floor is now 5s).
+  int customIntervalMs = 8000;
   double customDistanceFilter = 10.0;
   bool customBackgroundMode = false;
 
   // ── Smart Battery ────────────────────────────────────────────────
+  // Bật/tắt bộ tự-tối-ưu-pin (SmartBatteryManager) khi start tracking.
+  // Mặc định TẮT để tracking chạy đúng config user truyền (interval/distance cố
+  // định), không bị đổi profile theo pin/chuyển động. Đổi thành true để bật lại.
+  bool enableSmartBattery = false;
   SmartBatteryProfile smartBatteryProfile = SmartBatteryProfile.general;
   String smartBatteryPreferredPreset = 'general';
 
@@ -85,6 +90,18 @@ class TrackingProvider extends ChangeNotifier {
   FakeGpsEvent? lastFakeGpsEvent;
   final List<FakeGpsEvent> fakeGpsHistory = [];
   StreamSubscription<FakeGpsEvent>? _fakeGpsSub;
+
+  // ── Tracking interrupted (background GPS stall) ────────────────────
+  TrackingInterruptedEvent? lastInterruptedEvent;
+  final List<TrackingInterruptedEvent> interruptedHistory = [];
+  StreamSubscription<TrackingInterruptedEvent>? _interruptedSub;
+  bool interruptedNotificationEnabled = true;
+
+  Future<void> setInterruptedNotificationEnabled(bool enabled) async {
+    interruptedNotificationEnabled = enabled;
+    notifyListeners();
+    await _controller.setTrackingInterruptedNotificationEnabled(enabled);
+  }
 
   // ── Initialization ────────────────────────────────────────────────
   bool _initialized = false;
@@ -261,6 +278,16 @@ class TrackingProvider extends ChangeNotifier {
     _locationSub = _controller.onLocationUpdate.listen(_onLocation);
     _statusSub = _controller.onTrackingStatusChanged.listen(_onStatus);
     _fakeGpsSub = _controller.onFakeGpsDetected.listen(_onFakeGps);
+    _interruptedSub =
+        _controller.onTrackingInterrupted.listen(_onTrackingInterrupted);
+  }
+
+  void _onTrackingInterrupted(TrackingInterruptedEvent event) {
+    lastInterruptedEvent = event;
+    interruptedHistory.insert(0, event);
+    if (interruptedHistory.length > 20) interruptedHistory.removeLast();
+    debugPrint('[TrackingInterrupted] $event');
+    notifyListeners();
   }
 
   /// Call once from main() before runApp.
@@ -400,8 +427,8 @@ class TrackingProvider extends ChangeNotifier {
     if (useCustomConfig) {
       return _buildCustomConfig();
     }
-    // Default mode: use general preset
-    return TrackingPresets.general().copyWith(
+    // Default mode: use fitness preset (10s timer). General's 30s gap is too sparse.
+    return TrackingPresets.fitness().copyWith(
       userId: effectiveUserId,
       allowMockLocation: allowMockLocation,
     );
@@ -478,9 +505,11 @@ class TrackingProvider extends ChangeNotifier {
 
     _logSection('Start Tracking SDK');
 
-    // Nếu dùng custom config → set override để SmartBattery không ghi đè
-    // preset 'general' lên custom config của user
-    if (useCustomConfig) {
+    // SmartBattery override chỉ có ý nghĩa khi SmartBattery được bật. Khi tắt,
+    // luôn null để không có callback nào ghi đè config user.
+    if (enableSmartBattery && useCustomConfig) {
+      // Nếu dùng custom config → set override để SmartBattery không ghi đè
+      // preset 'general' lên custom config của user
       SmartBatteryManager.instance.customGeneralConfigOverride = () async {
         debugPrint(
           '[Provider] customOverride → apply activeConfig (${activeConfig.intervalMs}ms / ${activeConfig.distanceFilter}m)',
@@ -511,13 +540,23 @@ class TrackingProvider extends ChangeNotifier {
         averageSpeed = 0.0;
 
         _batterySub?.cancel();
-        _batterySub = _controller.onSmartBatteryProfileChanged.listen((
-          profile,
-        ) {
-          smartBatteryProfile = profile;
-          notifyListeners();
-        });
-        smartBatteryProfile = SmartBatteryManager.instance.currentProfile;
+        _batterySub = null;
+        if (enableSmartBattery) {
+          // Bật: lắng nghe thay đổi profile để cập nhật UI.
+          _batterySub = _controller.onSmartBatteryProfileChanged.listen((
+            profile,
+          ) {
+            smartBatteryProfile = profile;
+            notifyListeners();
+          });
+          smartBatteryProfile = SmartBatteryManager.instance.currentProfile;
+        } else {
+          // Tắt: controller.startTracking() luôn auto-enable SmartBattery, nên
+          // disable ngay để tracking chạy đúng config user, không tự đổi profile.
+          // Gọi thẳng manager (controller.disableSmartBatteryOptimization đã deprecated).
+          SmartBatteryManager.instance.disable();
+          smartBatteryProfile = SmartBatteryProfile.general;
+        }
       }
       return result;
     } finally {
@@ -935,6 +974,7 @@ class TrackingProvider extends ChangeNotifier {
     _statusSub?.cancel();
     _batterySub?.cancel();
     _fakeGpsSub?.cancel();
+    _interruptedSub?.cancel();
     if (_controller.isConfigured) {
       _controller.unregisterLifecycleObserver();
     }

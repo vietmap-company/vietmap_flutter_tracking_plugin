@@ -4,6 +4,7 @@ import '../models/location_data.dart';
 import '../models/tracking_status.dart';
 import '../models/permission_result.dart';
 import '../models/fake_gps_event.dart';
+import '../models/tracking_interrupted_event.dart';
 import 'method_channel_vietmap_tracking.dart';
 
 abstract class VietmapTrackingPlatform extends PlatformInterface {
@@ -129,6 +130,19 @@ abstract class VietmapTrackingPlatform extends PlatformInterface {
     required String message,
   });
 
+  // ── Tracking interrupted ──────────────────────────────────────
+
+  /// Enable/disable the local notification shown when tracking is interrupted
+  /// in background. The [onTrackingInterrupted] stream still fires when disabled.
+  Future<void> setTrackingInterruptedNotificationEnabled(bool enabled);
+
+  /// Customise the interrupted local-notification strings. Only the title/body
+  /// can be configured — the channel reason/payload is SDK-owned and fixed.
+  Future<void> setTrackingInterruptedNotificationConfig({
+    required String title,
+    required String message,
+  });
+
   // ── Event streams ─────────────────────────────────────────────────────────────
   Stream<LocationData> get onLocationUpdate;
   Stream<TrackingStatus> get onTrackingStatusChanged;
@@ -136,4 +150,8 @@ abstract class VietmapTrackingPlatform extends PlatformInterface {
   /// Stream of fake GPS detection events from native SDK.
   /// Native debounces at 30s — at most 1 event per 30-second window.
   Stream<FakeGpsEvent> get onFakeGpsDetected;
+
+  /// Stream of tracking-interrupted events from native SDK (GPS stopped pushing /
+  /// location unavailable / provider off / permission lost) and recovery.
+  Stream<TrackingInterruptedEvent> get onTrackingInterrupted;
 }

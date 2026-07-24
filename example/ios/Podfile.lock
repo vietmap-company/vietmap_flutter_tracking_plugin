@@ -22,10 +22,10 @@ PODS:
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
-  - vietmap_tracking_plugin (1.0.8):
+  - vietmap_tracking_plugin (1.1.1):
     - Flutter
-    - VietmapTrackingSDK (= 1.4.7)
-  - VietmapTrackingSDK (1.4.7)
+    - VietmapTrackingSDK (= 1.5.0)
+  - VietmapTrackingSDK (1.5.0)
 
 DEPENDENCIES:
   - background_location_2 (from `.symlinks/plugins/background_location_2/ios`)
@@ -40,11 +40,7 @@ DEPENDENCIES:
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - vietmap_tracking_plugin (from `.symlinks/plugins/vietmap_tracking_plugin/ios`)
-  - VietmapTrackingSDK (= 1.4.7)
-
-SPEC REPOS:
-  https://github.com/CocoaPods/Specs.git:
-    - VietmapTrackingSDK
+  - VietmapTrackingSDK (from `https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.0/VietmapTrackingSDK.podspec.json`)
 
 EXTERNAL SOURCES:
   background_location_2:
@@ -71,6 +67,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/shared_preferences_foundation/darwin"
   vietmap_tracking_plugin:
     :path: ".symlinks/plugins/vietmap_tracking_plugin/ios"
+  VietmapTrackingSDK:
+    :podspec: https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.0/VietmapTrackingSDK.podspec.json
 
 SPEC CHECKSUMS:
   background_location_2: 738e207c87ea5ee183a4e234d5766be4cdb019a7
@@ -84,9 +82,9 @@ SPEC CHECKSUMS:
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
-  vietmap_tracking_plugin: 603187a59ad761878a3906c81316d1c9b37f9355
-  VietmapTrackingSDK: e19563fa94704b977aa0cfecc1f76c6ca09b4145
+  vietmap_tracking_plugin: f69747139b02307e31395358d51fedcd9ed96d55
+  VietmapTrackingSDK: 6761c4ac5e25d8b66308b0541cd93bce0b1297ac
 
-PODFILE CHECKSUM: fc6d03519386de69a43ce31e56f46553a8dffd86
+PODFILE CHECKSUM: a6451f8c19525ee8c5aa869fdef8c05ba65375f1
 
 COCOAPODS: 1.16.2

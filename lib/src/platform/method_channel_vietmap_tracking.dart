@@ -6,6 +6,7 @@ import '../models/location_data.dart';
 import '../models/tracking_status.dart';
 import '../models/permission_result.dart';
 import '../models/fake_gps_event.dart';
+import '../models/tracking_interrupted_event.dart';
 
 class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   static const MethodChannel _channel = MethodChannel(
@@ -24,6 +25,11 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   // Native sends via channel.invokeMethod("onFakeGPSDetected", payload).
   static final _fakeGpsController = StreamController<FakeGpsEvent>.broadcast();
 
+  // Broadcast controller for native→Dart tracking-interrupted events.
+  // Native sends via channel.invokeMethod("onTrackingInterrupted", payload).
+  static final _trackingInterruptedController =
+      StreamController<TrackingInterruptedEvent>.broadcast();
+
   // Set up MethodChannel handler for native→Dart calls (e.g. onFakeGPSDetected).
   // Must be called once; subsequent calls override the previous handler.
   static void _ensureMethodCallHandler() {
@@ -32,6 +38,14 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
         if (!_fakeGpsController.isClosed) {
           _fakeGpsController.add(
             FakeGpsEvent.fromMap(call.arguments as Map<Object?, Object?>),
+          );
+        }
+      } else if (call.method == 'onTrackingInterrupted') {
+        if (!_trackingInterruptedController.isClosed) {
+          _trackingInterruptedController.add(
+            TrackingInterruptedEvent.fromMap(
+              call.arguments as Map<Object?, Object?>,
+            ),
           );
         }
       }
@@ -579,4 +593,43 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
 
   @override
   Stream<FakeGpsEvent> get onFakeGpsDetected => _fakeGpsController.stream;
+
+  // ── Tracking interrupted ──────────────────────────────────
+
+  @override
+  Future<void> setTrackingInterruptedNotificationEnabled(bool enabled) async {
+    // Ignore unused static field warning — it triggers handler installation.
+    assert(_handlerInstalled);
+    try {
+      await _channel.invokeMethod<void>(
+        'setTrackingInterruptedNotificationEnabled',
+        {'enabled': enabled},
+      );
+    } on PlatformException catch (e) {
+      throw Exception(
+        'Failed to setTrackingInterruptedNotificationEnabled: ${e.message}',
+      );
+    }
+  }
+
+  @override
+  Future<void> setTrackingInterruptedNotificationConfig({
+    required String title,
+    required String message,
+  }) async {
+    try {
+      await _channel.invokeMethod<void>(
+        'setTrackingInterruptedNotificationConfig',
+        {'title': title, 'message': message},
+      );
+    } on PlatformException catch (e) {
+      throw Exception(
+        'Failed to setTrackingInterruptedNotificationConfig: ${e.message}',
+      );
+    }
+  }
+
+  @override
+  Stream<TrackingInterruptedEvent> get onTrackingInterrupted =>
+      _trackingInterruptedController.stream;
 }

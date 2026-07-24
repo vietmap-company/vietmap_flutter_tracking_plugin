@@ -234,17 +234,6 @@ class FakeGpsCard extends StatelessWidget {
     });
   }
 
-  static String _policyDescription(String policy) => switch (policy) {
-        'skip' =>
-          'Silent: ignored by SDK. onFakeGpsDetected stream still fires for app logic.',
-        'warn' =>
-          'Warn: native shows local notification (debounced 30s). Needs notification permission.',
-        'stopTracking' =>
-          'Stop: SDK auto-stops tracking at native layer; UI syncs immediately from fake GPS callback.',
-        'logToServer' =>
-          'Log: saved to DB with is_fake=1, uploaded with X-Fake-GPS: true header.',
-        _ => '',
-      };
 
   /// Handle policy chip tap.
   /// For "warn": directly trigger OS notification permission popup if not yet granted.

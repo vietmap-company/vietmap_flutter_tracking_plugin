@@ -6,6 +6,7 @@ import 'models/location_data.dart';
 import 'models/tracking_status.dart';
 import 'models/permission_result.dart';
 import 'models/fake_gps_event.dart';
+import 'models/tracking_interrupted_event.dart';
 import 'models/gps_location.dart';
 import 'platform/vietmap_tracking_platform_interface.dart';
 import 'services/smart_battery_manager.dart';
@@ -26,6 +27,20 @@ class VietmapTrackingController with WidgetsBindingObserver {
   // Configuration state
   bool _isConfigured = false;
   bool get isConfigured => _isConfigured;
+
+  // ── Re-entrancy guard for startTracking ──────────────────────
+  // [instance] là singleton public: bất kỳ module nào trong app cũng gọi được
+  // startTracking(). Guard đặt ở đây thay vì ở tầng app, vì đây là chỗ duy nhất
+  // mọi caller đều phải đi qua.
+
+  /// True trong lúc một lệnh startTracking() đang bay xuống native.
+  ///
+  /// Dart chạy single-threaded nên một `bool` là mutex hợp lệ: không có lệnh nào
+  /// chen được vào giữa phép đọc và phép gán. Cần cờ này vì `isTrackingActive()`
+  /// vẫn trả `false` trong lúc lệnh start đầu tiên chưa hoàn tất — chỉ dựa vào
+  /// `isTrackingActive()` thôi thì hai lệnh start đồng thời sẽ cùng lọt.
+  bool _startInFlight = false;
+  bool get isStartInFlight => _startInFlight;
 
   // ── App Lifecycle observer ────────────────────────────────────
 
@@ -326,17 +341,43 @@ class VietmapTrackingController with WidgetsBindingObserver {
 
   // ── Tracking ──────────────────────────────────────────────────
 
+  /// Bắt đầu tracking.
+  ///
+  /// Trả `false` mà **không** gọi xuống native nếu tracking đã chạy, hoặc nếu
+  /// một lệnh [startTracking] khác đang bay. Đây là no-op an toàn, không làm
+  /// gián đoạn session đang có.
+  ///
+  /// Muốn đổi cấu hình khi đang tracking thì dùng [updateTrackingConfig], đừng
+  /// gọi lại [startTracking].
   Future<bool> startTracking(LocationTrackingConfig config) async {
     _requireConfigured();
-    _logSection('Start Tracking SDK');
-    if (config.userId == null || config.userId!.trim().isEmpty) {
-      throw ArgumentError.value(
-        config.userId,
-        'userId',
-        'userId is required to start tracking',
+
+    // Chặn "đang start". Đọc + gán liền nhau, không có await xen giữa.
+    if (_startInFlight) {
+      debugPrint(
+        'startTracking bỏ qua: đã có một lệnh start đang chạy (startInFlight)',
       );
+      return false;
     }
+    _startInFlight = true;
+
+    _logSection('Start Tracking SDK');
     try {
+      if (config.userId == null || config.userId!.trim().isEmpty) {
+        throw ArgumentError.value(
+          config.userId,
+          'userId',
+          'userId is required to start tracking',
+        );
+      }
+
+      // Chặn "đã tracking". Đặt trước khi xin quyền, vì một lệnh start thừa
+      // không được phép bật hộp thoại xin quyền cho người dùng.
+      if (await isTrackingActive()) {
+        debugPrint('startTracking bỏ qua: tracking đang chạy (alreadyTracking)');
+        return false;
+      }
+
       debugPrint(
         'intervalMs=${config.intervalMs} distanceFilter=${config.distanceFilter} backgroundMode=${config.backgroundMode}',
       );
@@ -359,6 +400,7 @@ class VietmapTrackingController with WidgetsBindingObserver {
       debugPrint('Failed to start tracking: $e');
       rethrow;
     } finally {
+      _startInFlight = false;
       _logSection('Start Tracking SDK', end: true);
     }
   }
@@ -665,6 +707,42 @@ class VietmapTrackingController with WidgetsBindingObserver {
       );
     } catch (e) {
       debugPrint('Failed to setFakeGpsNotificationConfig: $e');
+    }
+  }
+
+  // ── Tracking interrupted ──────────────────────────────────────
+
+  /// Stream of tracking-interrupted events: fired when background tracking stops
+  /// pushing GPS (location unavailable / provider off / permission lost) and when
+  /// it recovers. Use it to prompt the user to re-activate tracking (stop + start).
+  /// The event payload/reason is SDK-owned and not configurable.
+  Stream<TrackingInterruptedEvent> get onTrackingInterrupted =>
+      _platform.onTrackingInterrupted;
+
+  /// Enable/disable the local notification shown when tracking is interrupted in
+  /// background. The [onTrackingInterrupted] stream still fires when disabled.
+  /// Default: enabled.
+  Future<void> setTrackingInterruptedNotificationEnabled(bool enabled) async {
+    try {
+      await _platform.setTrackingInterruptedNotificationEnabled(enabled);
+    } catch (e) {
+      debugPrint('Failed to setTrackingInterruptedNotificationEnabled: $e');
+    }
+  }
+
+  /// Customise the interrupted local-notification strings. Only the title/body
+  /// can be configured — the channel reason/payload is SDK-owned and fixed.
+  Future<void> setTrackingInterruptedNotificationConfig({
+    required String title,
+    required String message,
+  }) async {
+    try {
+      await _platform.setTrackingInterruptedNotificationConfig(
+        title: title,
+        message: message,
+      );
+    } catch (e) {
+      debugPrint('Failed to setTrackingInterruptedNotificationConfig: $e');
     }
   }
 

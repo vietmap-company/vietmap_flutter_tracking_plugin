@@ -71,7 +71,7 @@ class ConfigCard extends StatelessWidget {
                         'Interval (ms):',
                         intervalController,
                         (v) => p.setCustomIntervalMs(
-                            int.tryParse(v) ?? 5000)),
+                            int.tryParse(v) ?? 8000)),
                     const SizedBox(height: 10),
                   ] else if (p.trackingWithDistance) ...[
                     _ConfigRow(
@@ -101,7 +101,7 @@ class ConfigCard extends StatelessWidget {
               child: Text(
                 () {
                   if (!p.useCustomConfig)
-                    return 'Config: General preset | 10000ms | 15m | bg: ✅ | user: ${p.effectiveUserId}';
+                    return 'Config: Fitness preset | 10000ms (10s) timer | bg: ✅ | user: ${p.effectiveUserId}';
                   final mode = p.trackingWithTimer
                       ? '⏱ Timer only'
                       : p.trackingWithDistance

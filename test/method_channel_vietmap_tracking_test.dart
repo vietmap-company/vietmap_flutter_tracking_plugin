@@ -389,8 +389,9 @@ void main() {
 
       await platform.startTracking(TrackingPresets.fitness());
 
-      expect(capturedArgs!['intervalMs'], 5000);
-      expect(capturedArgs!['distanceFilter'], 10.0);
+      expect(capturedArgs!['intervalMs'], 10000);
+      // Interval presets are timer-only — no distance gate.
+      expect(capturedArgs!['distanceFilter'], isNull);
       expect(capturedArgs!['accuracy'], 'high');
       expect(capturedArgs!['backgroundMode'], true);
     });
@@ -405,8 +406,8 @@ void main() {
 
       await platform.startTracking(TrackingPresets.batterySaver());
 
-      expect(capturedArgs!['intervalMs'], 30000);
-      expect(capturedArgs!['distanceFilter'], 50.0);
+      expect(capturedArgs!['intervalMs'], 300000);
+      expect(capturedArgs!['distanceFilter'], isNull);
       expect(capturedArgs!['accuracy'], 'low');
     });
   });
@@ -1015,22 +1016,40 @@ void main() {
     });
 
     test('all preset configs serialize correctly', () {
-      final presets = [
+      // Interval presets: timer-driven, distanceFilter is null.
+      final intervalPresets = [
         TrackingPresets.navigation(),
         TrackingPresets.fitness(),
         TrackingPresets.general(),
         TrackingPresets.batterySaver(),
       ];
 
-      for (final config in presets) {
+      for (final config in intervalPresets) {
         final json = config.toJson();
         // Every preset must produce valid JSON that iOS can parse
         expect(json['intervalMs'], isA<int>());
-        expect(json['distanceFilter'], isA<double>());
+        expect(json['intervalMs'], greaterThan(0));
+        expect(json['distanceFilter'], isNull);
         expect(json['accuracy'], isA<String>());
         expect(json['backgroundMode'], isA<bool>());
-        expect(json['intervalMs'], greaterThan(0));
-        expect(json['distanceFilter'], greaterThan(0.0));
+      }
+
+      // Distance presets: the mirror case — distance gate, no timer.
+      final distancePresets = [
+        TrackingPresets.navigationDistance(),
+        TrackingPresets.fitnessDistance(),
+        TrackingPresets.generalDistance(),
+        TrackingPresets.batterySaverDistance(),
+      ];
+
+      for (final config in distancePresets) {
+        final json = config.toJson();
+        expect(json['distanceFilter'], isA<double>());
+        // The native SDK clamps anything below 25 m up to the floor.
+        expect(json['distanceFilter'], greaterThanOrEqualTo(25.0));
+        expect(json['intervalMs'], isNull);
+        expect(json['accuracy'], isA<String>());
+        expect(json['backgroundMode'], isA<bool>());
       }
     });
   });

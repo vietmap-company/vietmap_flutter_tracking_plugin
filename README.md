@@ -61,8 +61,8 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 | Platform | SDK | Version |
 |----------|-----|---------|
-| iOS | VietmapTrackingSDK (CocoaPods) | 1.4.7 |
-| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.4.6 |
+| iOS | VietmapTrackingSDK (CocoaPods) | 1.5.0 |
+| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.5.1 |
 
 ---
 
@@ -534,12 +534,30 @@ await controller.setFakeGpsNotificationConfig({required String title, required S
 controller.onFakeGpsDetected  // → Stream<FakeGpsEvent>
 ```
 
+### Tracking Interrupted
+
+Fires when background tracking stops producing GPS while a session is still
+active, and again when it recovers. The OS does not resume on its own — use this
+to prompt the user to stop and start tracking again.
+
+```dart
+await controller.setTrackingInterruptedNotificationEnabled(bool enabled);
+await controller.setTrackingInterruptedNotificationConfig({required String title, required String message});
+controller.onTrackingInterrupted  // → Stream<TrackingInterruptedEvent>
+```
+
+The `reason` is SDK-owned and is one of the `TrackingInterruptedReason`
+constants: `locationUnavailable`, `providerDisabled`, `paused`,
+`authDowngraded`, `authDenied`, `locationServicesOff`, `permissionRevoked`,
+`staleNoUpdates`. Disabling the notification does not stop the stream.
+
 ### Event Streams
 
 ```dart
 controller.onLocationUpdate           // Stream<LocationData>
 controller.onTrackingStatusChanged    // Stream<TrackingStatus>
 controller.onFakeGpsDetected          // Stream<FakeGpsEvent>
+controller.onTrackingInterrupted      // Stream<TrackingInterruptedEvent>
 controller.onSmartBatteryProfileChanged // Stream<SmartBatteryProfile>
 ```
 
@@ -621,6 +639,15 @@ isFirstDetection     — bool (first in 30s debounce window)
 reason               — iOS only: "simulatedBySoftware" | "producedByAccessory"
 ```
 
+### `TrackingInterruptedEvent`
+
+```
+reason               — SDK-owned, see TrackingInterruptedReason
+recovered            — bool (true when location became available again)
+isInBackground       — bool (app was backgrounded when it fired)
+secondsSinceLastFix  — int (-1 if unknown)
+```
+
 ### `PermissionResult`
 
 ```
@@ -672,7 +699,7 @@ LocationUtils.isWithinRadius(location, targetLat, targetLng, radiusMetres);
 │   Swift              │  Kotlin                   │
 ├──────────────────────┼───────────────────────────┤
 │  VietmapTrackingSDK  │  vietmap-tracking-sdk     │
-│  1.4.7 (CocoaPods)   │  1.4.6 (JitPack)          │
+│  1.5.0 (CocoaPods)   │  1.5.1 (JitPack)          │
 └──────────────────────┴───────────────────────────┘
 ```
 

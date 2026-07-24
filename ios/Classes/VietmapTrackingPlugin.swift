@@ -190,6 +190,20 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             }
         }
 
+        // Tracking interrupted — background GPS stall / location unavailable /
+        // provider off / permission lost, and recovery. SDK-owned payload; the
+        // app cannot configure this channel message (only the local-notification
+        // title/body). Mirrors the Android bridge in VietmapTrackingPlugin.kt.
+        trackingManager.onTrackingInterrupted = { [weak self] payload in
+            guard let self = self else { return }
+            guard let dict = payload as? [String: Any] else { return }
+            self.nativeLog("Tracking interrupted: \(dict)")
+            // MUST dispatch to main thread — FlutterMethodChannel is not thread-safe
+            DispatchQueue.main.async {
+                self.channel?.invokeMethod("onTrackingInterrupted", arguments: dict)
+            }
+        }
+
         // Speed-sign + TTS callbacks are SDK-version dependent.
         // Current SDK build in this workspace does not expose
         // `onSpeedSignUpdate` / `onTtsAlert` on VietmapAlertBridge,
@@ -210,6 +224,7 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         trackingManager.onPermissionChanged = nil
         trackingManager.onRouteUpdate = nil
         trackingManager.onFakeGPSDetected = nil
+        trackingManager.onTrackingInterrupted = nil
     }
 
     // MARK: - FlutterPlugin Methods
@@ -292,6 +307,10 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             setFakeGPSPolicy(call, result: result)
         case "setFakeGpsNotificationConfig":
             setFakeGPSNotificationConfig(call, result: result)
+        case "setTrackingInterruptedNotificationEnabled":
+            setTrackingInterruptedNotificationEnabled(call, result: result)
+        case "setTrackingInterruptedNotificationConfig":
+            setTrackingInterruptedNotificationConfig(call, result: result)
         case "onAppBackground":
             trackingManager.onAppBackground(); result(nil)
         case "onAppForeground":
@@ -301,6 +320,28 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         default:
             result(FlutterMethodNotImplemented)
         }
+    }
+
+    // MARK: - Tracking Interrupted
+    private func setTrackingInterruptedNotificationEnabled(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        let args = call.arguments as? [String: Any]
+        let enabled = (args?["enabled"] as? Bool) ?? true
+        trackingManager.setTrackingInterruptedNotificationEnabled(enabled)
+        result(nil)
+    }
+
+    private func setTrackingInterruptedNotificationConfig(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let title = args["title"] as? String, !title.isEmpty,
+              let message = args["message"] as? String, !message.isEmpty else {
+            result(FlutterError(code: "INVALID_ARGUMENTS",
+                                message: "title and message are required",
+                                details: nil))
+            return
+        }
+        // SDK setter takes `body:` — map Dart's `message` onto it.
+        trackingManager.setTrackingInterruptedNotificationConfig(title: title, body: message)
+        result(nil)
     }
 
     // MARK: - Configuration Methods

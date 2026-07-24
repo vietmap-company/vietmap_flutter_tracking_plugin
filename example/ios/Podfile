@@ -1,4 +1,6 @@
-source 'https://github.com/CocoaPods/Specs.git'
+# Modern CDN trunk — resolves in seconds. The old git source
+# (github.com/CocoaPods/Specs.git) forced a multi-GB clone.
+source 'https://cdn.cocoapods.org/'
 
 platform :ios, '13.0'
 
@@ -31,9 +33,14 @@ flutter_ios_podfile_setup
 target 'Runner' do
   use_frameworks!
 
-  # Use local VietmapTrackingSDK
-  pod 'VietmapTrackingSDK', '1.4.7'
-  # pod 'VietmapTrackingSDK', :path => '/Volumes/240GB/New-Develop/map-sdk-tracking/ios'
+  # Published on CocoaPods trunk. 1.5.0 IS published (podspec.json returns 200),
+  # but the trunk version index still ends at 1.4.9, so plain
+  # `pod 'VietmapTrackingSDK', '1.5.0'` cannot resolve. Pointing at the podspec
+  # URL directly skips the index lookup and fetches only this one file — which
+  # also avoids the bulk download that trips the HTTP2 error on --repo-update.
+  # Once the index lists 1.5.0, this can go back to: pod 'VietmapTrackingSDK', '1.5.0'
+  pod 'VietmapTrackingSDK',
+      :podspec => 'https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.0/VietmapTrackingSDK.podspec.json'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do

@@ -9,6 +9,7 @@ export 'src/models/gps_location.dart';
 export 'src/models/route_data.dart';
 export 'src/models/tracking_presets.dart';
 export 'src/models/fake_gps_event.dart';
+export 'src/models/tracking_interrupted_event.dart';
 
 // Export platform interface
 export 'src/platform/vietmap_tracking_platform_interface.dart';

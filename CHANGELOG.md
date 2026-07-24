@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.2] - 2026-07-24
+
+### Added
+
+- **Tracking-interrupted events** — a new `onTrackingInterrupted` stream reports when background tracking stops producing GPS while a session is still active, and again when it recovers. Each event is a `TrackingInterruptedEvent` carrying `reason`, `recovered`, `isInBackground` and `secondsSinceLastFix`. The `reason` is SDK-owned and matches one of the `TrackingInterruptedReason` constants: `locationUnavailable`, `providerDisabled`, `paused`, `authDowngraded`, `authDenied`, `locationServicesOff`, `permissionRevoked`, `staleNoUpdates`. Use it to prompt the user to re-activate tracking (stop + start), since the OS will not resume on its own.
+- **Interrupted-notification controls** — `setTrackingInterruptedNotificationEnabled(bool)` toggles the local notification the native SDK shows on interruption, and `setTrackingInterruptedNotificationConfig(title:, message:)` customises its text. The `onTrackingInterrupted` stream keeps firing even when the notification is disabled.
+
+### Fixed
+
+- **iOS never delivered tracking-interrupted events** — the native SDK emitted them, but the iOS plugin never bound the SDK's `onTrackingInterrupted` callback and did not handle the two notification-config method calls, so the events were dropped before reaching Dart and the notification toggle silently did nothing. The events surfaced on Android only. The iOS bridge is now wired, matching the Android behaviour and payload.
+- **Stale preset unit tests** — the `TrackingPresets` tests asserted values from a much older preset design and had been failing; they now assert the shipped values.
+
+### Changed
+
+- **Distance presets respread to respect the SDK's 25 m floor** — the native SDK clamps `distanceFilter` up to a 25 m minimum, which silently collapsed `navigationDistance` (5 m) and `fitnessDistance` (10 m) into the same effective 25 m. The set is now `navigationDistance` 25 m, `fitnessDistance` 50 m, `generalDistance` 70 m (was 30 m) and `batterySaverDistance` 120 m (was 100 m) — every step is distinct and matches what the SDK actually applies.
+- **`batterySaver()` interval lowered from 10 minutes to 5 minutes** — the gap to `general()` (30 s) was too wide to be a useful next step.
+- **Native SDK update** — Upgraded the iOS native dependency to `1.5.0` and the Android native tracking SDK dependency to `1.5.1`.
+
+---
+
 ## [1.1.1] - 2026-06-29
 
 ### Added

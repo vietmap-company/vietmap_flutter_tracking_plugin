@@ -325,34 +325,44 @@ void main() {
   group('TrackingPresets', () {
     test('navigation preset should have correct values', () {
       final config = TrackingPresets.navigation();
-      expect(config.intervalMs, 3000);
-      expect(config.distanceFilter, 5.0);
+      expect(config.intervalMs, 5000);
+      expect(config.distanceFilter, isNull);
       expect(config.accuracy, LocationAccuracy.high);
       expect(config.backgroundMode, true);
     });
 
     test('fitness preset should have correct values', () {
       final config = TrackingPresets.fitness();
-      expect(config.intervalMs, 5000);
-      expect(config.distanceFilter, 10.0);
+      expect(config.intervalMs, 10000);
+      expect(config.distanceFilter, isNull);
       expect(config.accuracy, LocationAccuracy.high);
       expect(config.backgroundMode, true);
     });
 
     test('general preset should have correct values', () {
       final config = TrackingPresets.general();
-      expect(config.intervalMs, 10000);
-      expect(config.distanceFilter, 15.0);
+      expect(config.intervalMs, 30000);
+      expect(config.distanceFilter, isNull);
       expect(config.accuracy, LocationAccuracy.medium);
       expect(config.backgroundMode, true);
     });
 
     test('battery saver preset should have correct values', () {
       final config = TrackingPresets.batterySaver();
-      expect(config.intervalMs, 30000);
-      expect(config.distanceFilter, 50.0);
+      expect(config.intervalMs, 300000);
+      expect(config.distanceFilter, isNull);
       expect(config.accuracy, LocationAccuracy.low);
       expect(config.backgroundMode, true);
+    });
+
+    test('distance presets respect the 25m SDK floor and increase monotonically',
+        () {
+      expect(TrackingPresets.navigationDistance().distanceFilter, 25.0);
+      expect(TrackingPresets.fitnessDistance().distanceFilter, 50.0);
+      expect(TrackingPresets.generalDistance().distanceFilter, 70.0);
+      expect(TrackingPresets.batterySaverDistance().distanceFilter, 120.0);
+      // Distance mode leaves the timer disabled.
+      expect(TrackingPresets.navigationDistance().intervalMs, isNull);
     });
 
     test('presets should accept custom notification text', () {

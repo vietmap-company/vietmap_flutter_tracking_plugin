@@ -16,8 +16,13 @@ import 'location_tracking_config.dart';
 /// - Interval mode → `FusedLocationProviderClient` with
 ///   `LocationRequest.setInterval(intervalMs)` and no displacement filter.
 /// - Distance mode → same client with
-///   `LocationRequest.setSmallestDisplacement(distanceFilter)` and a large
-///   interval ceiling (60 s) so the OS batches correctly.
+///   `LocationRequest.setSmallestDisplacement(distanceFilter)`. `distanceFilter`
+///   alone gates which fixes are recorded (≥ N metres from the last recorded
+///   point) — no time-based points are produced. A SMALL sampling interval is
+///   used internally (not a large ceiling) so the OS polls position often enough
+///   to detect the displacement threshold accurately; a large interval would make
+///   the engine sample sparsely and miss the 25 m crossings (this was the old
+///   `Long.MAX_VALUE` bug that also prevented tracking from starting).
 ///
 /// ### iOS
 /// - Interval mode → `CLLocationManager` fires `didUpdateLocations`; the
@@ -25,6 +30,14 @@ import 'location_tracking_config.dart';
 ///   (< intervalMs since the last accepted fix).
 /// - Distance mode → `CLLocationManager.distanceFilter` is set to
 ///   [distanceFilter]; `desiredAccuracy` is tuned per preset.
+///
+/// ## SDK floors (enforced natively on both platforms, not configurable)
+///
+/// The native SDK clamps `intervalMs` up to **5000ms (5s)** and `distanceFilter`
+/// up to **25m** — values below these are silently raised. The presets below
+/// already respect the floors. Note: interval presets in the 5–10s band have
+/// their uploads coalesced to a single 10s cadence by the SDK to avoid server
+/// rate limiting; the GPS sampling interval itself is unaffected.
 class TrackingPresets {
   // ── Interval-based presets (default) ────────────────────────────────────
 
@@ -76,14 +89,14 @@ class TrackingPresets {
     );
   }
 
-  /// Low accuracy, timer-driven updates every 10 minutes.
+  /// Low accuracy, timer-driven updates every 5 minutes.
   /// Minimises battery consumption; suitable for slow-moving assets.
   static LocationTrackingConfig batterySaver({
     String? notificationTitle,
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
-      intervalMs: 600000,
+      intervalMs: 300000,
       distanceFilter: null,
       accuracy: LocationAccuracy.low,
       backgroundMode: true,
@@ -94,15 +107,15 @@ class TrackingPresets {
 
   // ── Distance-based presets ───────────────────────────────────────────────
 
-  /// Updates only after the device has moved at least 5 metres.
-  /// Use when you need dense point clouds along a route regardless of speed.
+  /// Updates only after the device has moved at least 25 metres (the SDK
+  /// distance floor). The densest point cloud the SDK allows in distance mode.
   static LocationTrackingConfig navigationDistance({
     String? notificationTitle,
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
       intervalMs: null,
-      distanceFilter: 5.0,
+      distanceFilter: 25.0,
       accuracy: LocationAccuracy.high,
       backgroundMode: true,
       notificationTitle: notificationTitle ?? 'Navigation Active',
@@ -110,14 +123,14 @@ class TrackingPresets {
     );
   }
 
-  /// Updates only after the device has moved at least 10 metres.
+  /// Updates only after the device has moved at least 50 metres.
   static LocationTrackingConfig fitnessDistance({
     String? notificationTitle,
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
       intervalMs: null,
-      distanceFilter: 10.0,
+      distanceFilter: 50.0,
       accuracy: LocationAccuracy.high,
       backgroundMode: true,
       notificationTitle: notificationTitle ?? 'Fitness Tracking',
@@ -125,14 +138,14 @@ class TrackingPresets {
     );
   }
 
-  /// Updates only after the device has moved at least 30 metres.
+  /// Updates only after the device has moved at least 70 metres.
   static LocationTrackingConfig generalDistance({
     String? notificationTitle,
     String? notificationMessage,
   }) {
     return LocationTrackingConfig(
       intervalMs: null,
-      distanceFilter: 30.0,
+      distanceFilter: 70.0,
       accuracy: LocationAccuracy.medium,
       backgroundMode: true,
       notificationTitle: notificationTitle ?? 'Location Tracking',
@@ -140,7 +153,7 @@ class TrackingPresets {
     );
   }
 
-  /// Updates only after the device has moved at least 100 metres.
+  /// Updates only after the device has moved at least 120 metres.
   /// Best battery conservation for slow or parked assets.
   static LocationTrackingConfig batterySaverDistance({
     String? notificationTitle,
@@ -148,7 +161,7 @@ class TrackingPresets {
   }) {
     return LocationTrackingConfig(
       intervalMs: null,
-      distanceFilter: 100.0,
+      distanceFilter: 120.0,
       accuracy: LocationAccuracy.low,
       backgroundMode: true,
       notificationTitle: notificationTitle ?? 'Location Tracking',
