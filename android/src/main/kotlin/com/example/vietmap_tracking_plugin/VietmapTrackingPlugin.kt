@@ -355,6 +355,7 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
             "configure" -> handleConfigure(call, result)
             "initializeTracking" -> handleInitializeTracking(call, result)
             "setMetadata" -> handleSetMetadata(call, result)
+            "setPackages" -> handleSetPackages(call, result)
             "setAppSignature" -> handleSetAppSignature(call, result)
             "configureAlertAPI" -> handleConfigureAlertAPI(call, result)
 
@@ -474,6 +475,28 @@ class VietmapTrackingPlugin : FlutterPlugin, MethodCallHandler, ActivityAware,
                 result.success(null)
             } catch (e: Exception) {
                 result.error("SET_METADATA_FAILED", e.message, null)
+            }
+        }
+    }
+
+    /**
+     * setPackages(packages: List<String>)
+     *
+     * Attaches package codes to every GPS post as the top-level "packages" field.
+     * An empty list clears the field so it is left out of the payload.
+     */
+    private fun handleSetPackages(call: MethodCall, result: Result) {
+        withSection("Set Packages") {
+            try {
+                // Flutter delivers a List<String>; drop anything non-String rather than
+                // throwing, so one bad entry cannot break the whole call.
+                val packages = call.argument<List<*>>("packages")
+                    ?.filterIsInstance<String>()
+                    ?: emptyList()
+                vietmapSDK.setPackages(packages)
+                result.success(null)
+            } catch (e: Exception) {
+                result.error("SET_PACKAGES_FAILED", e.message, null)
             }
         }
     }

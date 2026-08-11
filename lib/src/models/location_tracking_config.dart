@@ -50,6 +50,34 @@ class LocationTrackingConfig {
     this.enableSpeedFallback = true,
   });
 
+  /// Config that defers the tracking cadence to the native SDK's own defaults.
+  ///
+  /// [intervalMs] and [distanceFilter] are left null. Both platform handlers
+  /// read them as "not provided" and skip pushing a config, so the SDK runs on
+  /// its built-in defaults — currently a **10s timer** with a 25m distance
+  /// floor. Leaving them null rather than restating 10000 here keeps the SDK as
+  /// the single source of truth: change the default natively and the plugin
+  /// follows, with no second number to keep in step.
+  ///
+  /// The two values are not combined. When an interval and a distance are both
+  /// active the SDK gives the **timer priority and ignores the distance gate**
+  /// (identical logic on Android and iOS), so this behaves as a plain 10s timer.
+  ///
+  /// Use this instead of a [TrackingPresets] entry when you want the SDK's
+  /// cadence rather than a specific one.
+  const LocationTrackingConfig.sdkDefault({
+    this.accuracy,
+    this.backgroundMode = true,
+    this.notificationTitle,
+    this.notificationMessage,
+    this.userId,
+    this.vehicleId,
+    this.apiEndpoint,
+    this.allowMockLocation = true,
+    this.enableSpeedFallback = true,
+  })  : intervalMs = null,
+        distanceFilter = null;
+
   /// Convert to JSON for platform channel
   Map<String, dynamic> toJson() => {
     'intervalMs': intervalMs,

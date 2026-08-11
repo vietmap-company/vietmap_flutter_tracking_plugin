@@ -239,6 +239,8 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
             initializeTracking(call, result: result)
         case "setMetadata":
             setMetadata(call, result: result)
+        case "setPackages":
+            setPackages(call, result: result)
         case "setAppSignature":
             setAppSignature(call, result: result)
         case "configureAlertAPI":
@@ -591,6 +593,26 @@ public class VietmapTrackingPlugin: NSObject, FlutterPlugin {
         }
         nativeLog("setMetadata | keys=\(metadata.keys.sorted())")
         trackingManager.setMetadata(metadata as NSDictionary)
+        result(nil)
+    }
+
+    /// setPackages({packages: [String]})
+    ///
+    /// Attaches package codes to every GPS post as the top-level "packages" field.
+    /// An empty list clears the field so it is left out of the payload.
+    private func setPackages(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+        guard let args = call.arguments as? [String: Any],
+              let rawPackages = args["packages"] as? [Any] else {
+            result(FlutterError(code: "INVALID_ARGUMENTS",
+                               message: "packages list is required",
+                               details: nil))
+            return
+        }
+        // Flutter delivers a List<String>; drop anything non-String rather than
+        // failing, so one bad entry cannot break the whole call.
+        let packages = rawPackages.compactMap { $0 as? String }
+        nativeLog("setPackages | count=\(packages.count)")
+        trackingManager.setPackages(packages)
         result(nil)
     }
 

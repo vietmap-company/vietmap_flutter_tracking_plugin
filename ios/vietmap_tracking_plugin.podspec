@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'vietmap_tracking_plugin'
-  s.version          = '1.1.2'
+  s.version          = '1.1.3'
   s.summary          = 'Flutter plugin for Vietmap GPS tracking.'
   s.description      = <<-DESC
 A Flutter plugin for GPS tracking and location data transmission to Vietmap's tracking API with background service support.
@@ -15,8 +15,7 @@ A Flutter plugin for GPS tracking and location data transmission to Vietmap's tr
   s.source           = { :path => '.' }
   s.source_files = 'Classes/**/*'
   s.dependency 'Flutter'
-  s.dependency 'VietmapTrackingSDK', '1.5.0'
-  # s.dependency 'VietmapTrackingSDK'
+  s.dependency 'VietmapTrackingSDK', '1.5.1'
   s.platform = :ios, '12.0'
 
   # Flutter.framework does not contain a i386 slice.

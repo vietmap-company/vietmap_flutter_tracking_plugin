@@ -1,4 +1,4 @@
-# Modern CDN trunk — resolves in seconds. The old git source
+# Modern CDN trunk - resolves in seconds. The old git source
 # (github.com/CocoaPods/Specs.git) forced a multi-GB clone.
 source 'https://cdn.cocoapods.org/'
 
@@ -33,14 +33,20 @@ flutter_ios_podfile_setup
 target 'Runner' do
   use_frameworks!
 
-  # Published on CocoaPods trunk. 1.5.0 IS published (podspec.json returns 200),
-  # but the trunk version index still ends at 1.4.9, so plain
-  # `pod 'VietmapTrackingSDK', '1.5.0'` cannot resolve. Pointing at the podspec
-  # URL directly skips the index lookup and fetches only this one file — which
-  # also avoids the bulk download that trips the HTTP2 error on --repo-update.
-  # Once the index lists 1.5.0, this can go back to: pod 'VietmapTrackingSDK', '1.5.0'
+  # Published on CocoaPods trunk. 1.5.1 IS published (podspec.json returns 200), but
+  # the trunk version index (all_pods_versions_2_d_2.txt) still ends at 1.5.0, so plain
+  # `pod 'VietmapTrackingSDK', '1.5.1'` cannot resolve. Pointing at the podspec URL
+  # directly skips the index lookup and fetches only this one file - which also avoids
+  # the bulk download that trips the HTTP2 error on --repo-update.
+  # Once the index lists 1.5.1, this can go back to: pod 'VietmapTrackingSDK', '1.5.1'
   pod 'VietmapTrackingSDK',
-      :podspec => 'https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.0/VietmapTrackingSDK.podspec.json'
+      :podspec => 'https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.1/VietmapTrackingSDK.podspec.json'
+
+  # Local build - swap to this (and to the version-less s.dependency in the plugin
+  # podspec) to consume VietmapTrackingSDK.xcframework built in place by
+  # `bash build_xcframework.sh` in map-sdk-tracking/ios. Path is relative to this
+  # Podfile, so it holds as long as both repos sit side by side under Vietmap_SDK/.
+  # pod 'VietmapTrackingSDK', :path => '../../../map-sdk-tracking/ios'
 
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
   target 'RunnerTests' do

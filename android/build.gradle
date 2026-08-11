@@ -16,6 +16,7 @@ buildscript {
 
 allprojects {
     repositories {
+        // Local build only — uncomment together with the mavenLocal dependency below.
         // mavenLocal()
         google()
         mavenCentral()
@@ -50,8 +51,12 @@ android {
     }
 
     dependencies {
-        // VietmapTrackingSDK for Android (JitPack). 1.5.0 adds TrackingInterrupted support.
-        implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.5.1'
+        // VietmapTrackingSDK for Android (JitPack). 1.5.2 adds the top-level `packages`
+        // payload field, 10s/25m defaults, and the first-fix accuracy-tier bypass.
+        implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.5.2'
+        // Local build — swap to this (and uncomment mavenLocal() above) to consume the
+        // AAR produced by `bash publish.sh` in map-sdk-tracking/android. Version must
+        // match versionName in vietmap-tracking-sdk/build.gradle.
         // implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.4.11'
         // Google Play Services for Location
         implementation 'com.google.android.gms:play-services-location:21.0.1'

@@ -91,6 +91,15 @@ class MethodChannelVietmapTracking extends VietmapTrackingPlatform {
   }
 
   @override
+  Future<void> setPackages(List<String> packages) async {
+    try {
+      await _channel.invokeMethod<void>('setPackages', {'packages': packages});
+    } on PlatformException catch (e) {
+      throw Exception('Failed to setPackages: ${e.message}');
+    }
+  }
+
+  @override
   Future<void> setAppSignature(String signature) async {
     try {
       await _channel.invokeMethod<void>('setAppSignature', {'signature': signature});

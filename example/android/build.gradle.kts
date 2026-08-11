@@ -1,5 +1,8 @@
 allprojects {
     repositories {
+        // Local build only — uncomment when the plugin points at the mavenLocal SDK.
+        // Gradle resolves the SDK through the app's repository list, not the plugin's,
+        // so this must be enabled here too, not just in the plugin's build.gradle.
         // mavenLocal()
         google()
         mavenCentral()

@@ -143,6 +143,26 @@ class VietmapTrackingController with WidgetsBindingObserver {
     }
   }
 
+  /// Attach package codes to every GPS post as the top-level "packages" field.
+  ///
+  /// Optional field — pass an empty list to leave "packages" out of the payload.
+  ///
+  /// Can be called before or during tracking. The list is captured per GPS point
+  /// at the moment it is recorded, so points already cached offline keep the
+  /// packages they were captured with rather than picking up a later value.
+  ///
+  /// Example:
+  /// ```dart
+  /// await controller.setPackages(['#10001', '#10002']);
+  /// ```
+  Future<void> setPackages(List<String> packages) async {
+    try {
+      await _platform.setPackages(packages);
+    } catch (e) {
+      debugPrint('Failed to setPackages: $e');
+    }
+  }
+
   /// Set custom app signature to be sent as X-App-Signature header when fetching configuration.
   Future<void> setAppSignature(String signature) async {
     try {
@@ -211,11 +231,13 @@ class VietmapTrackingController with WidgetsBindingObserver {
     SmartBatteryManager.instance.setPreferredMovingProfile(profile);
   }
 
-  /// **Deprecated**: Smart Battery tự động bật cùng [startTracking].
-  /// Dùng [setSmartBatteryPreferredProfile] để đổi profile ưu tiên.
-  @Deprecated(
-    'Smart Battery is now auto-started with startTracking(). Use setSmartBatteryPreferredProfile() to change the preferred profile.',
-  )
+  /// Bật Smart Battery giữa phiên tracking đang chạy.
+  ///
+  /// Khi start tracking thì dùng `startTracking(config, enableSmartBattery: true)`
+  /// — hàm này dành cho trường hợp bật/tắt sau khi tracking đã chạy.
+  ///
+  /// Lưu ý: bật lên sẽ ghi đè interval hiện tại bằng preset của profile đang
+  /// chọn (Android: navigation 5s / general 30s / batterySaver 300s).
   Future<void> enableSmartBatteryOptimization({
     SmartBatteryProfile preferredMovingProfile = SmartBatteryProfile.general,
   }) async {
@@ -225,8 +247,13 @@ class VietmapTrackingController with WidgetsBindingObserver {
     );
   }
 
-  /// **Deprecated**: Smart Battery tự động tắt cùng [stopTracking].
-  @Deprecated('Smart Battery is now auto-stopped with stopTracking().')
+  /// Tắt Smart Battery giữa phiên tracking đang chạy.
+  ///
+  /// Chỉ dọn trạng thái phía Dart (huỷ listener pin + timer) — interval mà
+  /// Smart Battery đã đẩy xuống native vẫn giữ nguyên. Muốn quay lại nhịp của
+  /// mình thì gọi [updateTrackingConfig] sau đó.
+  ///
+  /// [stopTracking] đã tự gọi hàm này, không cần gọi thêm khi dừng tracking.
   void disableSmartBatteryOptimization() {
     SmartBatteryManager.instance.disable();
   }
@@ -349,7 +376,19 @@ class VietmapTrackingController with WidgetsBindingObserver {
   ///
   /// Muốn đổi cấu hình khi đang tracking thì dùng [updateTrackingConfig], đừng
   /// gọi lại [startTracking].
-  Future<bool> startTracking(LocationTrackingConfig config) async {
+  /// [enableSmartBattery] turns on [SmartBatteryManager], which adapts the GPS
+  /// cadence to battery level and vehicle state (moving / stationary / cornering).
+  ///
+  /// Off by default: the SDK already suppresses repeated pushes from a single
+  /// spot on its own — a stationary vehicle is thinned to one heartbeat every
+  /// 5 minutes, and that guard is always on natively. Smart Battery is a
+  /// separate trade: it stretches the GPS *sampling* interval, which saves real
+  /// battery but overrides the interval this call was given. Opt in when the
+  /// battery saving is worth the coarser cadence.
+  Future<bool> startTracking(
+    LocationTrackingConfig config, {
+    bool enableSmartBattery = false,
+  }) async {
     _requireConfigured();
 
     // Chặn "đang start". Đọc + gán liền nhau, không có await xen giữa.
@@ -389,8 +428,11 @@ class VietmapTrackingController with WidgetsBindingObserver {
         }
       }
       final result = await _platform.startTracking(config);
-      if (result) {
-        // Auto-enable Smart Battery — always active during tracking
+      if (result && enableSmartBattery) {
+        // Opt-in only. Left on by default it would immediately push its own
+        // preset over whatever cadence tracking just started with — the native
+        // `general` preset is 30s on Android, so a config asking for the SDK
+        // default 10s would silently end up at 30s a moment after start.
         await SmartBatteryManager.instance.enable(
           preferredMoving: SmartBatteryManager.instance.preferredMovingProfile,
         );

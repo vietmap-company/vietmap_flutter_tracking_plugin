@@ -9,6 +9,7 @@ import 'widgets/fake_gps_card.dart';
 import 'widgets/header_card.dart';
 import 'widgets/location_card.dart';
 import 'widgets/location_history_card.dart';
+import 'widgets/packages_card.dart';
 import 'widgets/permission_section.dart';
 import 'widgets/session_stats_card.dart';
 import 'widgets/smart_battery_card.dart';
@@ -65,6 +66,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
   final _maxRecordsController = TextEditingController(text: '5000');
   final _maxDbSizeMbController = TextEditingController(text: '50');
   final _batchSizeController = TextEditingController(text: '50');
+  final _packageInputController = TextEditingController();
 
   bool _emailEditing = false;
 
@@ -97,6 +99,7 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
     _maxRecordsController.dispose();
     _maxDbSizeMbController.dispose();
     _batchSizeController.dispose();
+    _packageInputController.dispose();
     super.dispose();
   }
 
@@ -219,6 +222,8 @@ class _TrackingDemoPageState extends State<TrackingDemoPage> {
                 _snack('✅ Email saved', bg: Colors.green);
               },
             ),
+            const SizedBox(height: 16),
+            PackagesCard(inputController: _packageInputController),
             const SizedBox(height: 16),
 
             const SpeedAlertCard(),

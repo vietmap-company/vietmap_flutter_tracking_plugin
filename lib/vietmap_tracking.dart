@@ -114,6 +114,25 @@ class VietmapTrackingPlugin {
     }
   }
 
+  /// Attach package codes to every GPS post as the top-level "packages" field.
+  ///
+  /// Optional field — pass an empty list to leave "packages" out of the payload.
+  /// Can be called before or during tracking; the list is captured per GPS point
+  /// at the moment it is recorded, so points already cached offline keep the
+  /// packages they were captured with.
+  ///
+  /// Example:
+  /// ```dart
+  /// await VietmapTrackingPlugin.instance.setPackages(['#10001', '#10002']);
+  /// ```
+  Future<void> setPackages(List<String> packages) async {
+    try {
+      await _method.invokeMethod<void>('setPackages', {'packages': packages});
+    } on PlatformException {
+      rethrow;
+    }
+  }
+
   /// Set custom app signature to be sent as X-App-Signature header when fetching configuration.
   Future<void> setAppSignature(String signature) async {
     try {

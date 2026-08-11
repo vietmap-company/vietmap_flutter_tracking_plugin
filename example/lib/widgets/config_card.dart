@@ -100,8 +100,9 @@ class ConfigCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(6)),
               child: Text(
                 () {
-                  if (!p.useCustomConfig)
+                  if (!p.useCustomConfig) {
                     return 'Config: Fitness preset | 10000ms (10s) timer | bg: ✅ | user: ${p.effectiveUserId}';
+                  }
                   final mode = p.trackingWithTimer
                       ? '⏱ Timer only'
                       : p.trackingWithDistance

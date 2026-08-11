@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:vietmap_tracking_plugin/vietmap_tracking_plugin.dart';
 
 const _kPrefEmail = 'user_email';
+const _kPrefPackages = 'package_codes';
 
 // Set to `true` to make the tracking SDK send the API key via query parameter
 // instead of the default request header.
@@ -27,6 +28,17 @@ class TrackingProvider extends ChangeNotifier {
   // ── Identity ────────────────────────────────────────────────────
   String deviceId = '047000f7a187494e';
   String userEmail = '';
+
+  // ── Package codes (payload's top-level `packages` field) ─────────
+  /// Codes staged in the UI. They only reach GPS payloads once
+  /// [applyPackages] hands them to the SDK.
+  final List<String> packages = [];
+
+  /// Snapshot of what was last handed to the SDK, so the UI can tell staged
+  /// edits apart from what points are actually being tagged with right now.
+  List<String> appliedPackages = [];
+
+  bool get packagesDirty => !listEquals(packages, appliedPackages);
 
   // ── Tracking state ───────────────────────────────────────────────
   bool isTracking = false;
@@ -142,6 +154,7 @@ class TrackingProvider extends ChangeNotifier {
     _logSection('Provider Init');
 
     await _loadSavedEmail();
+    await _loadSavedPackages();
     await _resolveDeviceId();
     await _checkPermissions();
     await _checkTrackingStatus();
@@ -168,6 +181,80 @@ class TrackingProvider extends ChangeNotifier {
       });
     }
     notifyListeners();
+  }
+
+  // ─────────────────────────────────────────────────────────────────
+  // Package codes
+  //
+  // `packages` is a top-level, optional field of the GPS payload:
+  //   {"time":…, "lat":…, "lng":…, "packages":["#10001","#10002"], "metadata":{…}}
+  //
+  // The SDK captures the list per GPS point at the moment it is recorded, so a
+  // point cached offline keeps the codes that were active when it was captured
+  // rather than picking up whatever is set when it finally uploads. That is why
+  // the UI separates "staged" from "applied": nothing changes on the wire until
+  // applyPackages() runs.
+  // ─────────────────────────────────────────────────────────────────
+
+  Future<void> _loadSavedPackages() async {
+    final prefs = await SharedPreferences.getInstance();
+    packages
+      ..clear()
+      ..addAll(prefs.getStringList(_kPrefPackages) ?? const []);
+    // Restored codes are staged, not applied — configureSdk() pushes them to
+    // the SDK once it is initialised.
+    notifyListeners();
+  }
+
+  /// Stage codes typed or pasted by the user.
+  ///
+  /// Accepts comma / newline / whitespace separated input so a whole list can
+  /// be pasted at once. Normalisation mirrors what the SDK does natively:
+  /// entries are trimmed and blanks are dropped, because `setPackages` skips
+  /// empty strings on both platforms. Duplicates are dropped too — that part is
+  /// a UI convenience, the SDK would forward them verbatim.
+  ///
+  /// Returns how many codes were actually added.
+  int addPackages(String raw) {
+    final tokens = raw
+        .split(RegExp(r'[,\n\r\t ]+'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty);
+
+    var added = 0;
+    for (final code in tokens) {
+      if (packages.contains(code)) continue;
+      packages.add(code);
+      added++;
+    }
+    if (added > 0) notifyListeners();
+    return added;
+  }
+
+  void removePackage(String code) {
+    if (packages.remove(code)) notifyListeners();
+  }
+
+  /// Push the staged codes to the SDK. From this point on every GPS record
+  /// carries them until the list is changed again.
+  Future<void> applyPackages() async {
+    await _controller.setPackages(packages);
+    appliedPackages = List<String>.from(packages);
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setStringList(_kPrefPackages, packages);
+
+    debugPrint('Provider: setPackages -> $packages');
+    notifyListeners();
+  }
+
+  /// Drop every code and tell the SDK to stop attaching the field.
+  ///
+  /// An empty list is how the SDK is told to omit `packages` from the payload
+  /// entirely — it is not sent as `[]`.
+  Future<void> clearPackages() async {
+    packages.clear();
+    await applyPackages();
   }
 
   Future<void> _resolveDeviceId() async {
@@ -229,6 +316,11 @@ class TrackingProvider extends ChangeNotifier {
         'appVersion': '1.0.0',
         'device-id': deviceId,
       });
+
+      // 3b. Re-apply package codes restored from disk. Nothing saved means
+      //     nothing to send — the SDK leaves `packages` out of the payload on
+      //     its own, so there is no call to make.
+      if (packages.isNotEmpty) await applyPackages();
 
       // 3. Configure the SDK's native fake GPS notification.
       await _controller.setFakeGpsNotificationConfig(
@@ -427,8 +519,15 @@ class TrackingProvider extends ChangeNotifier {
     if (useCustomConfig) {
       return _buildCustomConfig();
     }
-    // Default mode: use fitness preset (10s timer). General's 30s gap is too sparse.
-    return TrackingPresets.fitness().copyWith(
+    // Default mode: defer to the SDK's own cadence (10s timer) instead of
+    // pinning a preset here. Leaving intervalMs/distanceFilter unset means the
+    // interval lives in exactly one place — the native SDK — so this app cannot
+    // drift from it the way a hardcoded preset would.
+    return LocationTrackingConfig.sdkDefault(
+      accuracy: LocationAccuracy.high,
+      backgroundMode: true,
+      notificationTitle: 'Location Tracking',
+      notificationMessage: 'Tracking your location',
       userId: effectiveUserId,
       allowMockLocation: allowMockLocation,
     );
@@ -525,7 +624,10 @@ class TrackingProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await _controller.startTracking(activeConfig);
+      final result = await _controller.startTracking(
+        activeConfig,
+        enableSmartBattery: enableSmartBattery,
+      );
       if (result) {
         final isActive = await _controller.isTrackingActive();
         if (!isActive) {
@@ -551,10 +653,8 @@ class TrackingProvider extends ChangeNotifier {
           });
           smartBatteryProfile = SmartBatteryManager.instance.currentProfile;
         } else {
-          // Tắt: controller.startTracking() luôn auto-enable SmartBattery, nên
-          // disable ngay để tracking chạy đúng config user, không tự đổi profile.
-          // Gọi thẳng manager (controller.disableSmartBatteryOptimization đã deprecated).
-          SmartBatteryManager.instance.disable();
+          // Nothing to undo: startTracking() only enables Smart Battery when it
+          // is asked to, so tracking keeps the cadence activeConfig started with.
           smartBatteryProfile = SmartBatteryProfile.general;
         }
       }
