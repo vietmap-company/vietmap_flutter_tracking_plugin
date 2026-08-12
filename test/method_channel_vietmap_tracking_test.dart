@@ -147,6 +147,57 @@ void main() {
   });
 
   // ============================================================
+  // MARK: - setPackages
+  // ============================================================
+
+  group('setPackages', () {
+    test('should invoke method with the packages list', () async {
+      String? capturedMethod;
+      Map<Object?, Object?>? capturedArgs;
+
+      mockHandler = (MethodCall call) async {
+        capturedMethod = call.method;
+        capturedArgs = call.arguments as Map<Object?, Object?>;
+        return null;
+      };
+
+      await platform.setPackages(['#10001', '#10002']);
+
+      expect(capturedMethod, 'setPackages');
+      expect(capturedArgs!['packages'], ['#10001', '#10002']);
+    });
+
+    test('should forward an empty list so native clears the field', () async {
+      // An empty list is the documented way to drop "packages" from the
+      // payload, so it must reach native rather than being skipped here.
+      Map<Object?, Object?>? capturedArgs;
+
+      mockHandler = (MethodCall call) async {
+        capturedArgs = call.arguments as Map<Object?, Object?>;
+        return null;
+      };
+
+      await platform.setPackages([]);
+
+      expect(capturedArgs!['packages'], isEmpty);
+    });
+
+    test('should throw on PlatformException', () async {
+      mockHandler = (MethodCall call) async {
+        throw PlatformException(
+          code: 'SET_PACKAGES_FAILED',
+          message: 'native failure',
+        );
+      };
+
+      expect(
+        () => platform.setPackages(['#10001']),
+        throwsA(isA<Exception>()),
+      );
+    });
+  });
+
+  // ============================================================
   // MARK: - requestLocationPermissions
   // ============================================================
 
@@ -965,6 +1016,7 @@ void main() {
       await platform.isTrackingActive();
       await platform.getTrackingStatus();
       await platform.updateTrackingConfig(TrackingPresets.general());
+      await platform.setPackages(['#10001']);
 
       // Verify all method names match iOS switch cases
       expect(invokedMethods, [
@@ -979,6 +1031,7 @@ void main() {
         'isTrackingActive',
         'getTrackingStatus',
         'updateTrackingConfig',
+        'setPackages',
       ]);
     });
   });

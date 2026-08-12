@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.4] - 2026-08-12
+
+Documentation-only release — no functional changes. `1.1.3` shipped the
+`packages` API and the Smart Battery opt-in without updating the docs that
+describe them; this release closes that gap.
+
+### Documentation
+
+- **README brought in line with the shipped API** — new "Package Codes" section (payload shape, empty-list semantics, per-point capture), `LocationTrackingConfig.sdkDefault()` documented as a third tracking mode alongside interval and distance, and the Smart Battery section rewritten around the opt-in flag including mid-session toggling. The API Reference now lists `setPackages` and the `enableSmartBattery` parameter of `startTracking`.
+- **Corrected preset values that had been stale since 1.1.2** — the README still advertised `batterySaver()` as 10 min (it is 5 min) and the distance presets as 5 / 10 / 30 / 100 m (they are 25 / 50 / 70 / 120 m). It now also documents the SDK's 25 m distance floor and that the timer wins when an interval and a distance are both set.
+- **Version references synced** — install snippet, native SDK table (iOS `1.5.1`, Android `1.5.2`) and the architecture diagram had all been left on older numbers.
+
+### Added
+
+- **Tests for `setPackages`** — the method channel call, the empty-list case that clears the field, and its error path, plus the method name in the exhaustive `Method Name Verification` list.
+
+---
+
 ## [1.1.3] - 2026-08-11
 
 ### Added
@@ -19,6 +37,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Smart Battery is now opt-in** — `startTracking(config, enableSmartBattery: true)`. It used to switch on automatically with every `startTracking()`, and because it immediately applies its own profile preset it silently overrode the cadence the call had just asked for — a config requesting the SDK default 10 s ended up at the Android `general` preset's 30 s a moment after start. Tracking now keeps the interval it was started with unless Smart Battery is explicitly requested. **Apps that relied on the automatic behaviour must pass `enableSmartBattery: true`.** Note that battery-driven thinning of *uploads* from a stationary vehicle is a separate, always-on native guard (one heartbeat every 5 minutes) and is unaffected by this flag.
 - **`enableSmartBatteryOptimization()` / `disableSmartBatteryOptimization()` are no longer deprecated** — with Smart Battery opt-in they have a defined role again: toggling it mid-session. Enabling overrides the current interval with the selected profile's preset (Android: navigation 5 s / general 30 s / batterySaver 300 s); disabling only tears down the Dart-side listeners, so call `updateTrackingConfig()` afterwards to return to your own cadence. `stopTracking()` still disables it for you.
 - **Native SDK update** — Upgraded the Android native tracking SDK dependency to `1.5.2` (adds the top-level `packages` payload field, the 10 s / 25 m defaults, and a first-fix accuracy-tier bypass) and the iOS native dependency to `1.5.1` (adds the `packages` field).
+
+### Fixed
+
+- **Example app shipped a real API key and server URL** — `example/lib/main.dart` now uses `'your-api-key'` and `'your-server/api/v1'` placeholders.
 
 ---
 

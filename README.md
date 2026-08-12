@@ -19,6 +19,7 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 - [iOS Setup](#ios-setup)
 - [Quick Start](#quick-start)
 - [Tracking Modes & Presets](#tracking-modes--presets)
+- [Package Codes](#package-codes)
 - [Fake GPS Detection](#fake-gps-detection)
 - [Speed Alert System](#speed-alert-system)
 - [Offline Cache & Sync](#offline-cache--sync)
@@ -38,11 +39,12 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 | Background GPS | Foreground service (Android) / background location mode (iOS) |
 | API Key Validation | `initializeTracking` validates server-side — throws `INVALID_API_KEY` on failure |
 | Metadata Attachment | `setMetadata` stamps every GPS record with arbitrary key-value pairs |
+| Package Codes | `setPackages` attaches a top-level `packages` list to every GPS record; omitted when the list is empty |
 | Speed Alerts | Real-time speed monitoring via configurable Alert API |
 | Offline Cache | SQLite cache with auto-upload when network recovers |
 | Speed Fallback | Derives speed from position when the OS reports no/zero speed while moving (Xiaomi/MIUI); tags each fix with `speedSource` |
 | Fake GPS Detection | Native detection with 4 configurable response policies; SDK issues its own notification even when app is killed |
-| Smart Battery | Auto-adjusts tracking precision based on battery level and movement |
+| Smart Battery | Opt-in — adjusts tracking precision based on battery level and movement |
 | Tracking Presets | Navigation / Fitness / General / BatterySaver — interval and distance variants |
 | Location Utilities | Haversine distance, speed conversion, geofence check |
 
@@ -61,8 +63,8 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 | Platform | SDK | Version |
 |----------|-----|---------|
-| iOS | VietmapTrackingSDK (CocoaPods) | 1.5.0 |
-| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.5.1 |
+| iOS | VietmapTrackingSDK (CocoaPods) | 1.5.1 |
+| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.5.2 |
 
 ---
 
@@ -70,7 +72,7 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 ```yaml
 dependencies:
-  vietmap_tracking_plugin: ^1.0.9
+  vietmap_tracking_plugin: ^1.1.4
 ```
 
 ```bash
@@ -256,7 +258,14 @@ await controller.startTracking(
 await controller.startTracking(
   TrackingPresets.general().copyWith(userId: 'user-123'),
 );
+
+// Or let the native SDK pick the cadence (10 s timer / 25 m floor):
+await controller.startTracking(
+  LocationTrackingConfig.sdkDefault(userId: 'user-123'),
+);
 ```
+
+> Tracking keeps the cadence you pass here. [Smart Battery](#smart-battery-optimization) is opt-in — pass `enableSmartBattery: true` if you want the SDK to adapt the interval to battery level and movement.
 
 ### 5. Listen for Updates
 
@@ -291,6 +300,9 @@ controller.unregisterLifecycleObserver();
 |------|-------------|------------------|-----------|
 | **Interval (timer-driven)** | `> 0` | `null` | Update every N milliseconds regardless of movement |
 | **Distance** | `null` | `> 0` | Update only after the device has moved M metres |
+| **SDK default** | `null` | `null` | Defer to the native SDK's own cadence — 10 s timer, 25 m distance floor. Use `LocationTrackingConfig.sdkDefault()`. |
+
+> The SDK clamps `distanceFilter` up to a **25 m** floor, and when both values are set the timer wins and the distance gate is ignored (same logic on Android and iOS).
 
 ### Pre-built Presets
 
@@ -300,16 +312,16 @@ controller.unregisterLifecycleObserver();
 TrackingPresets.navigation()    //  5 s  — real-time vehicle / turn-by-turn
 TrackingPresets.fitness()       // 10 s  — outdoor activities
 TrackingPresets.general()       // 30 s  — balanced fleet tracking (default)
-TrackingPresets.batterySaver()  // 10 min — parked or low-battery assets
+TrackingPresets.batterySaver()  //  5 min — parked or low-battery assets
 ```
 
 #### Distance-based
 
 ```dart
-TrackingPresets.navigationDistance()    // every   5 m
-TrackingPresets.fitnessDistance()       // every  10 m
-TrackingPresets.generalDistance()       // every  30 m
-TrackingPresets.batterySaverDistance()  // every 100 m
+TrackingPresets.navigationDistance()    // every  25 m — the SDK's distance floor
+TrackingPresets.fitnessDistance()       // every  50 m
+TrackingPresets.generalDistance()       // every  70 m
+TrackingPresets.batterySaverDistance()  // every 120 m
 ```
 
 Always attach `userId` via `copyWith`:
@@ -319,6 +331,25 @@ await controller.startTracking(
   TrackingPresets.general().copyWith(userId: 'user-123'),
 );
 ```
+
+---
+
+## Package Codes
+
+`setPackages` attaches a list of package/parcel codes to every GPS record as a **top-level** `packages` field — alongside `metadata`, not inside it:
+
+```json
+{"time": 1777876800000, "lat": 10.762219, "lng": 106.656956, "packages": ["#10001", "#10002"], "metadata": { }}
+```
+
+```dart
+await controller.setPackages(['#10001', '#10002']);
+
+// Empty list clears the field — it is left out of the payload, not sent as []
+await controller.setPackages([]);
+```
+
+The field is optional and can be set before or during tracking. The list is captured **per GPS point at the moment it is recorded**, so a point cached offline keeps the codes that were active when it was captured rather than picking up whatever is set when it finally uploads.
 
 ---
 
@@ -443,11 +474,13 @@ await controller.clearCachedLocations();
 
 ## Smart Battery Optimization
 
-Smart Battery is **automatically started** with `startTracking()` and **stopped** with `stopTracking()`. No manual enable/disable needed.
+Smart Battery is **opt-in**. Pass `enableSmartBattery: true` to `startTracking()`; `stopTracking()` disables it again.
 
 ```dart
 // Set preferred profile for moving sessions (default: general)
 controller.setSmartBatteryPreferredProfile(SmartBatteryProfile.navigation);
+
+await controller.startTracking(config, enableSmartBattery: true);
 
 // Listen for profile changes
 controller.onSmartBatteryProfileChanged.listen((profile) {
@@ -455,11 +488,21 @@ controller.onSmartBatteryProfileChanged.listen((profile) {
 });
 ```
 
+It can also be toggled mid-session:
+
+```dart
+await controller.enableSmartBatteryOptimization();   // applies the current profile's preset
+controller.disableSmartBatteryOptimization();        // Dart-side teardown only
+await controller.updateTrackingConfig(myConfig);     // …so restore your cadence after disabling
+```
+
 | Profile | Interval | Use case |
 |---------|----------|----------|
 | `navigation` | 5 s | Turn-by-turn, high accuracy |
 | `general` | 30 s | Standard fleet tracking |
-| `batterySaver` | 10 min | Low battery / parked |
+| `batterySaver` | 5 min | Low battery / parked |
+
+> **Why opt-in:** enabling it immediately applies the active profile's native preset, which replaces the interval `startTracking()` was just given — a config asking for the SDK default 10 s would end up at `general`'s 30 s moments after start. Thinning of *uploads* from a stationary vehicle (one heartbeat every 5 minutes) is a separate native guard that is always on and unaffected by this flag.
 
 The manager switches profiles automatically:
 - Battery < 15% + not charging → `batterySaver`
@@ -469,7 +512,9 @@ The manager switches profiles automatically:
 
 ### Custom config and Smart Battery
 
-Smart Battery is always active during tracking and will silently override the native tracking interval whenever a profile transition occurs (low battery, stationary, cornering). When using a standard preset this is the intended behaviour. When using a custom `LocationTrackingConfig` with non-preset values, you must register a `customGeneralConfigOverride` callback **before** calling `startTracking()` to prevent Smart Battery from replacing your config with a native preset.
+This only applies when Smart Battery is enabled — leave it off and your config stays exactly as passed.
+
+Once enabled, Smart Battery overrides the native tracking interval on every profile transition (low battery, stationary, cornering). With a standard preset that is the intended behaviour. With a custom `LocationTrackingConfig` carrying non-preset values, register a `customGeneralConfigOverride` callback **before** calling `startTracking()` so your config is re-applied instead of a native preset.
 
 ```dart
 // Register before startTracking — tells Smart Battery to re-apply your config
@@ -478,7 +523,7 @@ SmartBatteryManager.instance.customGeneralConfigOverride = () async {
   await controller.updateTrackingConfig(myCustomConfig);
 };
 
-await controller.startTracking(myCustomConfig);
+await controller.startTracking(myCustomConfig, enableSmartBattery: true);
 ```
 
 Clear the override when stopping to avoid it persisting across sessions:
@@ -500,6 +545,7 @@ SmartBatteryManager.instance.customGeneralConfigOverride = null;
 |--------|-------------|
 | `initializeTracking(apiKey, {baseURL})` | Validates key server-side. Throws `INVALID_API_KEY` on failure. |
 | `setMetadata(Map)` | Stamps every GPS record with arbitrary key-value pairs. |
+| `setPackages(List<String>)` | Attaches package codes to every GPS record as the top-level `packages` field. Empty list → field omitted. |
 | `configureAlertAPI(apiKey, apiID)` | Configures speed alert credentials. |
 | `setFakeGpsNotificationConfig({title, message})` | Customises SDK native fake GPS notification. |
 | `registerLifecycleObserver()` | Enables automatic background/foreground SDK transitions. |
@@ -508,7 +554,7 @@ SmartBatteryManager.instance.customGeneralConfigOverride = null;
 
 | Method | Returns | Description |
 |--------|---------|-------------|
-| `startTracking(config)` | `bool` | Start GPS tracking. `userId` in config is required. |
+| `startTracking(config, {enableSmartBattery = false})` | `bool` | Start GPS tracking. `userId` in config is required. Set `enableSmartBattery: true` to let [Smart Battery](#smart-battery-optimization) adapt the interval. |
 | `stopTracking()` | `bool` | Stop tracking; SDK may flush pending records. |
 | `isTrackingActive()` | `bool` | Whether tracking is currently running. |
 | `getCurrentLocation()` | `LocationData` | Actively resolves the current device location on demand — works even before `startTracking()`. Throws if the location cannot be resolved (permission denied, location services off, or timeout). |
@@ -699,7 +745,7 @@ LocationUtils.isWithinRadius(location, targetLat, targetLng, radiusMetres);
 │   Swift              │  Kotlin                   │
 ├──────────────────────┼───────────────────────────┤
 │  VietmapTrackingSDK  │  vietmap-tracking-sdk     │
-│  1.5.0 (CocoaPods)   │  1.5.1 (JitPack)          │
+│  1.5.1 (CocoaPods)   │  1.5.2 (JitPack)          │
 └──────────────────────┴───────────────────────────┘
 ```
 
