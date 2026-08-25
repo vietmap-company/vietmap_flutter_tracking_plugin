@@ -53,7 +53,7 @@ android {
     dependencies {
         // VietmapTrackingSDK for Android (JitPack). 1.5.2 adds the top-level `packages`
         // payload field, 10s/25m defaults, and the first-fix accuracy-tier bypass.
-        implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.5.2'
+        implementation 'com.github.vietmap-company:vietmap-tracking-sdk-android:1.5.3'
         // Local build — swap to this (and uncomment mavenLocal() above) to consume the
         // AAR produced by `bash publish.sh` in map-sdk-tracking/android. Version must
         // match versionName in vietmap-tracking-sdk/build.gradle.

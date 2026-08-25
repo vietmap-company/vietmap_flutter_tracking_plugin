@@ -22,10 +22,10 @@ PODS:
   - shared_preferences_foundation (0.0.1):
     - Flutter
     - FlutterMacOS
-  - vietmap_tracking_plugin (1.1.1):
+  - vietmap_tracking_plugin (1.1.5):
     - Flutter
-    - VietmapTrackingSDK (= 1.5.0)
-  - VietmapTrackingSDK (1.5.0)
+    - VietmapTrackingSDK (= 1.5.2)
+  - VietmapTrackingSDK (1.5.2)
 
 DEPENDENCIES:
   - background_location_2 (from `.symlinks/plugins/background_location_2/ios`)
@@ -40,7 +40,7 @@ DEPENDENCIES:
   - permission_handler_apple (from `.symlinks/plugins/permission_handler_apple/ios`)
   - shared_preferences_foundation (from `.symlinks/plugins/shared_preferences_foundation/darwin`)
   - vietmap_tracking_plugin (from `.symlinks/plugins/vietmap_tracking_plugin/ios`)
-  - VietmapTrackingSDK (from `https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.0/VietmapTrackingSDK.podspec.json`)
+  - VietmapTrackingSDK (from `https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.2/VietmapTrackingSDK.podspec.json`)
 
 EXTERNAL SOURCES:
   background_location_2:
@@ -68,7 +68,7 @@ EXTERNAL SOURCES:
   vietmap_tracking_plugin:
     :path: ".symlinks/plugins/vietmap_tracking_plugin/ios"
   VietmapTrackingSDK:
-    :podspec: https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.0/VietmapTrackingSDK.podspec.json
+    :podspec: https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.2/VietmapTrackingSDK.podspec.json
 
 SPEC CHECKSUMS:
   background_location_2: 738e207c87ea5ee183a4e234d5766be4cdb019a7
@@ -82,9 +82,9 @@ SPEC CHECKSUMS:
   integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   shared_preferences_foundation: 9e1978ff2562383bd5676f64ec4e9aa8fa06a6f7
-  vietmap_tracking_plugin: f69747139b02307e31395358d51fedcd9ed96d55
-  VietmapTrackingSDK: 6761c4ac5e25d8b66308b0541cd93bce0b1297ac
+  vietmap_tracking_plugin: 2c50df83b5fd819f1f2177a72d9f9ef1c2a4cd09
+  VietmapTrackingSDK: 2c0cc63827150af0bb24951666dc0b6e36d75f24
 
-PODFILE CHECKSUM: a6451f8c19525ee8c5aa869fdef8c05ba65375f1
+PODFILE CHECKSUM: ccce054c8ff9fa783eff1370df2b4ffdfe1990bb
 
 COCOAPODS: 1.16.2

@@ -63,8 +63,8 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 | Platform | SDK | Version |
 |----------|-----|---------|
-| iOS | VietmapTrackingSDK (CocoaPods) | 1.5.1 |
-| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.5.2 |
+| iOS | VietmapTrackingSDK (CocoaPods) | 1.5.2 |
+| Android | com.github.vietmap-company:vietmap-tracking-sdk-android | 1.5.3 |
 
 ---
 
@@ -72,7 +72,7 @@ A Flutter plugin for GPS location tracking powered by **VietmapTrackingSDK**. Su
 
 ```yaml
 dependencies:
-  vietmap_tracking_plugin: ^1.1.4
+  vietmap_tracking_plugin: ^1.1.5
 ```
 
 ```bash
@@ -582,9 +582,20 @@ controller.onFakeGpsDetected  // → Stream<FakeGpsEvent>
 
 ### Tracking Interrupted
 
-Fires when background tracking stops producing GPS while a session is still
-active, and again when it recovers. The OS does not resume on its own — use this
-to prompt the user to stop and start tracking again.
+Fires when a tracking session stops receiving GPS fixes altogether, and again
+when one arrives. Detection is a silence watchdog: the SDK raises the event only
+after **no raw fix for `max(30s, 2 × interval + 10s)`** — 30 s at the default 10 s
+cadence — re-checked every 15 s, in the foreground as well as the background,
+identically on Android and iOS.
+
+A transient "cannot produce a fix right now" from the OS
+(`onLocationAvailability(false)` on Android, `CLError.locationUnknown` on iOS) is
+deliberately **not** reported. Both platforms document that signal as advisory,
+and on a device with a weak GNSS fix it flips every few seconds while fixes keep
+arriving — reporting it produced a stream of false alarms that meant nothing.
+
+Because the event now only fires on real silence, do not wire it to an automatic
+stop-and-start of tracking; surface it to the user and let them decide.
 
 ```dart
 await controller.setTrackingInterruptedNotificationEnabled(bool enabled);
@@ -745,7 +756,7 @@ LocationUtils.isWithinRadius(location, targetLat, targetLng, radiusMetres);
 │   Swift              │  Kotlin                   │
 ├──────────────────────┼───────────────────────────┤
 │  VietmapTrackingSDK  │  vietmap-tracking-sdk     │
-│  1.5.1 (CocoaPods)   │  1.5.2 (JitPack)          │
+│  1.5.2 (CocoaPods)   │  1.5.3 (JitPack)          │
 └──────────────────────┴───────────────────────────┘
 ```
 

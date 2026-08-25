@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.5] - 2026-08-25
+
+### Fixed
+
+- **Tracking-interrupted no longer fires on a transient GPS dip** — on devices with a marginal GNSS fix (reported on Redmi/MIUI, but not specific to any vendor) the SDK raised an interruption on every `onLocationAvailability(false)` from FusedLocationProvider. On one field session that produced **29 events in 4 minutes 24 seconds — 15 local notifications appearing and disappearing** — while GPS was in fact healthy and delivering a fix roughly every 15 seconds. The built-in 30 s debounce could not stop it, because each recovery cleared the interrupted flag and let the next dip through immediately. Google documents `LocationAvailability` as "a best guess that is not necessarily accurate and should not be relied upon", so it is no longer used as a detector.
+
+### Changed
+
+- **Interruptions are now detected from GPS silence, not from the OS availability signal** — the SDK raises the event only when **no raw fix has arrived for `max(30s, 2 × interval + 10s)`**, re-checked every 15 s. The transient OS signal is still read, but only to label the event's `reason` (`locationUnavailable` when the provider had declared itself unavailable during the silent window, `staleNoUpdates` otherwise). **This changes what integrating apps observe:** far fewer events, and a genuine outage is now reported after 30–45 s instead of ~5 s. **Apps that automatically stop and restart tracking in response to `onTrackingInterrupted` should remove that behaviour** — it was reacting to false alarms and cost a first-fix each time it ran.
+- **iOS now matches Android's detection exactly** — it previously used a fixed 20 s threshold, polled only once every 60 s, and **only ran while the app was in the background**, so an outage with the app open was never reported and a background outage could take up to 80 s to surface. It now uses the same `max(30s, 2 × interval + 10s)` formula on the same 15 s cadence in both foreground and background, and can emit the `locationUnavailable` reason, which it never did before.
+- **A failing `onTrackingInterrupted` listener can no longer drop a GPS point (Android)** — the callback runs inside the location pipeline, ahead of the upload guard and the database write, and an exception thrown by the app's handler was rethrown and aborted processing for that fix. It is now contained.
+- **Native SDK update** — Android `1.5.3`, iOS `1.5.2`.
+
+### Documentation
+
+- **README "Tracking Interrupted" rewritten** around the new detection rule — the threshold and its formula, the re-check cadence, that it now fires in the foreground too, why the transient OS signal is ignored, and the advice not to auto-restart tracking from the event.
+
+---
+
 ## [1.1.4] - 2026-08-12
 
 Documentation-only release — no functional changes. `1.1.3` shipped the

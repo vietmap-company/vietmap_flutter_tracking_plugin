@@ -40,7 +40,7 @@ target 'Runner' do
   # the bulk download that trips the HTTP2 error on --repo-update.
   # Once the index lists 1.5.1, this can go back to: pod 'VietmapTrackingSDK', '1.5.1'
   pod 'VietmapTrackingSDK',
-      :podspec => 'https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.1/VietmapTrackingSDK.podspec.json'
+      :podspec => 'https://cdn.cocoapods.org/Specs/2/d/2/VietmapTrackingSDK/1.5.2/VietmapTrackingSDK.podspec.json'
 
   # Local build - swap to this (and to the version-less s.dependency in the plugin
   # podspec) to consume VietmapTrackingSDK.xcframework built in place by
